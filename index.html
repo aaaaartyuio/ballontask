@@ -1,0 +1,2147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Balloon Task - 心を整える風船To Do</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Zen Maru Gothic & Inter (リラックスと視認性を両立) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --font-main: 'Zen Maru Gothic', 'Inter', sans-serif;
+        }
+        body {
+            font-family: var(--font-main);
+            background: linear-gradient(160deg, #eef6f7 0%, #f6f4f0 50%, #ebf3f5 100%);
+            color: #2c3e42;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        /* リラックス感のある柔らかい浮遊アニメーション */
+        @keyframes floatGentle {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-7px) rotate(1.2deg); }
+        }
+        .balloon-float {
+            animation: floatGentle 4.2s ease-in-out infinite;
+        }
+        .balloon-float-delay-1 { animation-delay: 0.7s; }
+        .balloon-float-delay-2 { animation-delay: 1.4s; }
+
+        /* 風船の立体感（光沢・空気圧による張り） */
+        .balloon-body {
+            position: relative;
+            border-radius: 50% 50% 48% 48% / 55% 55% 45% 45%;
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+            cursor: pointer;
+        }
+        /* 風船のハイライト（空気の張り具合で変化） */
+        .balloon-body::before {
+            content: '';
+            position: absolute;
+            top: 12%;
+            left: 16%;
+            width: 22%;
+            height: 14%;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.55);
+            transform: rotate(-28deg);
+            pointer-events: none;
+        }
+        /* 風船の結び目 */
+        .balloon-knot {
+            width: 14px;
+            height: 9px;
+            margin: -2px auto 0;
+            clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%);
+        }
+        /* 風船のひも */
+        .balloon-string {
+            width: 1.5px;
+            height: 22px;
+            margin: 0 auto;
+            background: rgba(100, 116, 139, 0.35);
+            border-radius: 2px;
+        }
+
+        /* タップで膨らむ・割れるアニメーション */
+        .balloon-tap-1 { transform: scale(1.08) !important; }
+        .balloon-tap-2 { transform: scale(1.18) !important; filter: brightness(1.05); }
+        @keyframes balloonPop {
+            0% { transform: scale(1.2); opacity: 1; }
+            40% { transform: scale(1.48); opacity: 0.85; }
+            100% { transform: scale(0.1); opacity: 0; }
+        }
+        .balloon-popping {
+            animation: balloonPop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+        }
+
+        /* メモが風船に入って飛んでいくアニメーション */
+        @keyframes memoShrinkIntoBalloon {
+            0% { transform: scale(1) translateY(0); opacity: 1; border-radius: 24px; }
+            50% { transform: scale(0.45) translateY(-20px); opacity: 0.95; border-radius: 50%; }
+            100% { transform: scale(0.15) translateY(-60px); opacity: 0; border-radius: 50%; }
+        }
+        @keyframes balloonFlyAway {
+            0% { transform: translateY(40px) scale(0.3); opacity: 0; }
+            30% { transform: translateY(0px) scale(1.08); opacity: 1; }
+            60% { transform: translateY(-30px) scale(1.0); opacity: 1; }
+            100% { transform: translateY(-420px) scale(0.85) rotate(8deg); opacity: 0; }
+        }
+        .animate-memo-shrink {
+            animation: memoShrinkIntoBalloon 0.65s ease-in forwards;
+        }
+        .animate-balloon-fly {
+            animation: balloonFlyAway 1.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        /* メモ帳の罫線スタイル */
+        .notepad-paper {
+            background-color: #fffef9;
+            background-image: linear-gradient(#e7e5dc 1px, transparent 1px);
+            background-size: 100% 2.1rem;
+            line-height: 2.1rem;
+            box-shadow: 0 12px 32px -8px rgba(44, 62, 66, 0.12), 0 2px 6px rgba(44, 62, 66, 0.05);
+        }
+
+        /* ドラッグ中の視覚フィードバック */
+        .dragging-balloon {
+            opacity: 0.55;
+            transform: scale(1.06);
+            z-index: 50;
+        }
+        .drag-over-target {
+            outline: 2.5px dashed #5c9ead;
+            outline-offset: 6px;
+            border-radius: 24px;
+        }
+
+        /* スクロールバー非表示（スッキリした見た目） */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between min-h-dvh">
+
+    <!-- アプリ全体コンテナ（スマホ最適化・最大幅制限） -->
+    <div id="app-shell" class="w-full max-w-md min-h-dvh flex flex-col relative px-4 pt-3 pb-6">
+
+        <!-- トップバー（共通ヘッダー） -->
+        <header class="flex items-center justify-between py-2 mb-2 z-20">
+            <button id="btn-back" onclick="navigateBack()" class="hidden items-center gap-1 px-3 py-1.5 rounded-full bg-white/80 hover:bg-white text-slate-600 text-sm font-medium shadow-xs transition active:scale-95">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                <span>戻る</span>
+            </button>
+            <div id="header-spacer" class="w-14"></div>
+
+            <!-- セキュリティ＆自動保存・iCloud・Googleカレンダー拡張ステータスバッジ -->
+            <div class="flex items-center gap-2">
+                <button onclick="openSettingsModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 hover:bg-white text-xs font-medium text-slate-600 shadow-xs transition active:scale-95">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>自動保存 & iCloud対応</span>
+                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- =========================================================
+             画面1：ホーム画面（「やることを確認」「やることを記憶」）
+        ========================================================== -->
+        <main id="view-home" class="flex-1 flex flex-col items-center justify-center text-center px-2 transition-opacity duration-300">
+            <!-- 装飾のミニ風船イラスト -->
+            <div class="flex items-end justify-center gap-4 mb-6">
+                <div class="w-10 h-12 rounded-full bg-gradient-to-br from-teal-200 to-teal-400 shadow-md balloon-float"></div>
+                <div class="w-14 h-16 rounded-full bg-gradient-to-br from-amber-200 to-orange-300 shadow-lg balloon-float balloon-float-delay-1"></div>
+                <div class="w-11 h-13 rounded-full bg-gradient-to-br from-sky-200 to-indigo-300 shadow-md balloon-float balloon-float-delay-2"></div>
+            </div>
+
+            <h1 class="text-2xl font-bold tracking-wide text-slate-700 mb-2">Balloon Task</h1>
+            <p class="text-sm text-slate-500 mb-10 leading-relaxed">
+                やることを風船に浮かべて、<br>終わったら軽やかに割りましょう。
+            </p>
+
+            <div class="w-full space-y-4">
+                <!-- やることを確認 -->
+                <button onclick="navigateTo('view-categories')" class="w-full py-5 px-6 rounded-3xl bg-white hover:bg-teal-50/70 border border-teal-100 shadow-md hover:shadow-lg transition-all flex items-center justify-between group active:scale-[0.98]">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-teal-100/80 text-teal-700 flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                            🎈
+                        </div>
+                        <div class="text-left">
+                            <div class="text-lg font-bold text-slate-700">やることを確認</div>
+                            <div class="text-xs text-slate-400">期間別・タグ別の風船を見る</div>
+                        </div>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+
+                <!-- やることを記憶 -->
+                <button onclick="openCreateView()" class="w-full py-5 px-6 rounded-3xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white shadow-md hover:shadow-lg transition-all flex items-center justify-between group active:scale-[0.98]">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-white/20 text-white flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                            📝
+                        </div>
+                        <div class="text-left">
+                            <div class="text-lg font-bold">やることを記憶</div>
+                            <div class="text-xs text-teal-100">メモ帳に書いて風船を飛ばす</div>
+                        </div>
+                    </div>
+                    <svg class="w-5 h-5 text-white/80 group-hover:translate-x-1 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </main>
+
+        <!-- =========================================================
+             画面2：期間・タグ選択ページ（「やることを確認」遷移先）
+        ========================================================== -->
+        <section id="view-categories" class="hidden flex-1 flex flex-col justify-center px-1">
+            <div class="text-center mb-6">
+                <h2 class="text-xl font-bold text-slate-700">どの風船を確認しますか？</h2>
+                <p class="text-xs text-slate-500 mt-1">期間やタグを選んでタスクを表示します</p>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="openTaskList('today')" class="w-full p-4 rounded-2xl bg-white/90 hover:bg-white border border-rose-100 shadow-sm flex items-center justify-between transition active:scale-[0.98]">
+                    <div class="flex items-center gap-3.5">
+                        <span class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-sm">今日</span>
+                        <div class="text-left">
+                            <div class="font-bold text-slate-700">今日中のTo Do</div>
+                            <div class="text-[11px] text-slate-400">ドラッグ＆ドロップで自由に並び替え可能</div>
+                        </div>
+                    </div>
+                    <span id="badge-today" class="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-600 text-xs font-bold">0</span>
+                </button>
+
+                <button onclick="openTaskList('week')" class="w-full p-4 rounded-2xl bg-white/90 hover:bg-white border border-amber-100 shadow-sm flex items-center justify-between transition active:scale-[0.98]">
+                    <div class="flex items-center gap-3.5">
+                        <span class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">1週間</span>
+                        <div class="text-left">
+                            <div class="font-bold text-slate-700">１週間中のTo Do</div>
+                            <div class="text-[11px] text-slate-400">曜日別表示・長押しで来週へ先送り</div>
+                        </div>
+                    </div>
+                    <span id="badge-week" class="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs font-bold">0</span>
+                </button>
+
+                <button onclick="openTaskList('month')" class="w-full p-4 rounded-2xl bg-white/90 hover:bg-white border border-teal-100 shadow-sm flex items-center justify-between transition active:scale-[0.98]">
+                    <div class="flex items-center gap-3.5">
+                        <span class="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-sm">1か月</span>
+                        <div class="text-left">
+                            <div class="font-bold text-slate-700">１か月中のTo Do</div>
+                            <div class="text-[11px] text-slate-400">今月の優先度順風船リスト</div>
+                        </div>
+                    </div>
+                    <span id="badge-month" class="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 text-xs font-bold">0</span>
+                </button>
+
+                <button onclick="openTaskList('quarter')" class="w-full p-4 rounded-2xl bg-white/90 hover:bg-white border border-indigo-100 shadow-sm flex items-center justify-between transition active:scale-[0.98]">
+                    <div class="flex items-center gap-3.5">
+                        <span class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">3か月</span>
+                        <div class="text-left">
+                            <div class="font-bold text-slate-700">３か月中のTo Do</div>
+                            <div class="text-[11px] text-slate-400">四半期（1期〜4期）ごとの目標・予定</div>
+                        </div>
+                    </div>
+                    <span id="badge-quarter" class="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold">0</span>
+                </button>
+
+                <button onclick="openTaskList('tag')" class="w-full p-4 rounded-2xl bg-white/90 hover:bg-white border border-emerald-100 shadow-sm flex items-center justify-between transition active:scale-[0.98]">
+                    <div class="flex items-center gap-3.5">
+                        <span class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg">🏷️</span>
+                        <div class="text-left">
+                            <div class="font-bold text-slate-700">タグ別To do</div>
+                            <div class="text-[11px] text-slate-400">タグごとに分類・タグの追加削除</div>
+                        </div>
+                    </div>
+                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- =========================================================
+             画面3：To Do 風船一覧ページ（今日・1週間・1か月・3か月・タグ別）
+        ========================================================== -->
+        <section id="view-list" class="hidden flex-1 flex flex-col">
+            <!-- タイトル＆カレンダーマーク -->
+            <div class="flex items-center justify-center gap-2.5 py-2 px-3 bg-white/75 rounded-2xl shadow-xs mb-3 relative">
+                <h2 id="list-title" class="text-base sm:text-lg font-bold text-slate-700 text-center">
+                    〇月〇日のTo do一覧
+                </h2>
+                <!-- カレンダーマーク（別日選択ピッカーを起動） -->
+                <button onclick="openDatePicker()" title="別の日を選択" class="p-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 transition active:scale-90 relative">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </button>
+                <input type="date" id="hidden-date-picker" class="sr-only" onchange="onDatePicked(this.value)">
+            </div>
+
+            <!-- 操作ヒントバー -->
+            <div id="list-hint-bar" class="text-[11px] text-center text-slate-500 mb-3 bg-white/50 py-1 px-3 rounded-full">
+                風船をタップして詳細確認・チェック後に3回タップで割れます
+            </div>
+
+            <!-- タグ別モード時のタグフィルターバー（＋タグ追加・削除ボタン付き） -->
+            <div id="tag-filter-bar" class="hidden flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-2 mb-2">
+                <!-- JSで動的生成 -->
+            </div>
+
+            <!-- 風船表示エリア（3つずつ縦に並ぶグリッド / 週間は曜日グループごと） -->
+            <div id="balloon-container" class="flex-1 overflow-y-auto no-scrollbar pb-8 space-y-6">
+                <!-- JSで風船をレンダリング -->
+            </div>
+        </section>
+
+        <!-- =========================================================
+             画面4：「やることを記憶」メモ帳入力画面
+        ========================================================== -->
+        <section id="view-create" class="hidden flex-1 flex flex-col justify-between pb-2">
+            <!-- メモ帳本体 -->
+            <div id="notepad-card" class="notepad-paper rounded-3xl p-5 border border-amber-200/70 flex-1 flex flex-col justify-between relative overflow-hidden transition-all">
+                <!-- 上部ヘッダー：左に期限入力、右上に「完了」ボタン -->
+                <div>
+                    <div class="flex items-start justify-between gap-2 pb-3 border-b border-amber-200/80">
+                        <!-- 左側：期限の日付と数字入力 -->
+                        <div class="flex flex-col">
+                            <label class="text-[11px] font-bold text-amber-800/70 tracking-wider">期限の日付・日数</label>
+                            <div class="flex items-center gap-1.5 mt-1">
+                                <input type="date" id="input-due-date" class="bg-amber-50/90 border border-amber-200 rounded-xl px-2.5 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-400">
+                                <div class="flex items-center bg-amber-50/90 border border-amber-200 rounded-xl px-2 py-1">
+                                    <input type="number" id="input-due-days" min="0" max="365" placeholder="0" oninput="syncDaysToDate(this.value)" class="w-9 text-xs font-bold text-center bg-transparent text-slate-700 focus:outline-none">
+                                    <span class="text-[11px] text-slate-500">日後</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 右上：完了ボタン -->
+                        <button onclick="submitNewTask()" class="px-5 py-2 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm shadow-md active:scale-95 transition shrink-0">
+                            完了
+                        </button>
+                    </div>
+
+                    <!-- 真ん中：To Doの件名 -->
+                    <div class="mt-4">
+                        <label class="text-[11px] font-bold text-slate-400">To Doの件名</label>
+                        <input type="text" id="input-task-title" placeholder="やることを書き留める..." class="w-full text-lg font-bold text-slate-800 bg-transparent border-b-2 border-dashed border-slate-300 focus:border-teal-500 focus:outline-none py-1.5 placeholder:text-slate-300">
+                    </div>
+
+                    <!-- サブタスク追加エリア -->
+                    <div class="mt-4">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-[11px] font-bold text-slate-400">サブタスク（任意・個別期限設定可）</span>
+                            <button type="button" onclick="addSubtaskInputRow()" class="text-xs font-bold text-teal-600 hover:text-teal-700 flex items-center gap-1 bg-teal-50 px-2.5 py-1 rounded-full">
+                                <span>＋ サブタスクを追加</span>
+                            </button>
+                        </div>
+                        <div id="subtask-inputs-container" class="space-y-2 max-h-40 overflow-y-auto no-scrollbar pr-1">
+                            <!-- 動的にサブタスク入力欄が追加される -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右下（下部）：タグ（複数選択）と風船の色設定 -->
+                <div class="mt-5 pt-3 border-t border-amber-200/80">
+                    <div class="flex flex-col gap-3">
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-[11px] font-bold text-slate-500">タグ（複数選択可）</span>
+                                <button type="button" onclick="openManageTagsModal()" class="text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 px-2.5 py-0.5 rounded-full transition">
+                                    ＋ タグの追加・削除
+                                </button>
+                            </div>
+                            <div id="create-tags-container" class="flex flex-wrap gap-1.5">
+                                <!-- タグボタンを動的生成 -->
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-bold text-slate-500">風船の色</span>
+                            <div id="create-colors-container" class="flex items-center gap-2">
+                                <!-- カラーパレット動的生成 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 飛んでいく風船アニメーション用オーバーレイ -->
+            <div id="fly-animation-stage" class="hidden fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
+                <div id="flying-balloon-unit" class="flex flex-col items-center">
+                    <div id="flying-balloon-body" class="w-32 h-36 rounded-full shadow-2xl flex items-center justify-center p-4 text-center text-white font-bold text-sm">
+                        <span id="flying-balloon-text" class="line-clamp-2 drop-shadow-xs"></span>
+                    </div>
+                    <div id="flying-balloon-knot" class="balloon-knot bg-teal-500"></div>
+                    <div class="balloon-string h-12"></div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- =========================================================
+         モーダル1：風船タップ時の詳細（サブタスク・チェック・3回タップ破裂）
+    ========================================================== -->
+    <div id="modal-detail" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative animate-fade-in">
+            <button onclick="closeDetailModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200">✕</button>
+
+            <!-- タップして割るためのインタラクティブ風船 -->
+            <div class="flex flex-col items-center mb-4">
+                <div id="detail-balloon-visual" onclick="handleDetailBalloonTap()" class="balloon-body w-28 h-32 flex flex-col items-center justify-center p-3 text-center text-white shadow-lg select-none">
+                    <span id="detail-balloon-tap-hint" class="text-[10px] bg-black/20 px-2 py-0.5 rounded-full mb-1">チェック後3回タップ</span>
+                    <span id="detail-balloon-title" class="text-xs font-bold line-clamp-2 leading-tight"></span>
+                </div>
+                <div id="detail-balloon-knot" class="balloon-knot"></div>
+                <div class="balloon-string h-4"></div>
+                <p id="detail-tap-counter-text" class="text-xs font-bold text-teal-600 mt-1">
+                    左のチェックを入れてから風船を3回タップ！
+                </p>
+            </div>
+
+            <!-- 期限・タグ情報 -->
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-2xl mb-3">
+                <div>期限: <span id="detail-due-date" class="font-bold text-slate-700"></span></div>
+                <div id="detail-tags" class="flex flex-wrap gap-1"></div>
+            </div>
+
+            <!-- チェックリスト（サブタスクまたはメインタスク） -->
+            <div class="space-y-2 max-h-48 overflow-y-auto no-scrollbar" id="detail-checklist-container">
+                <!-- JSで生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         モーダル2：1週間中のTo Do 長押しメニュー
+    ========================================================== -->
+    <div id="modal-longpress" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-5 shadow-2xl space-y-2.5">
+            <div class="text-center pb-2 border-b border-slate-100">
+                <p class="text-xs text-slate-400">選択中のタスク</p>
+                <p id="longpress-task-title" class="font-bold text-slate-700 text-sm truncate mt-0.5"></p>
+            </div>
+            <button onclick="deferTaskWeeks(1)" class="w-full py-3.5 px-4 rounded-2xl bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-sm transition text-center">
+                このタスクを来週に回す
+            </button>
+            <button onclick="deferTaskWeeks(2)" class="w-full py-3.5 px-4 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold text-sm transition text-center">
+                このタスクを2週間後に回す
+            </button>
+            <button onclick="deleteTaskFromLongPress()" class="w-full py-3.5 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-sm transition text-center">
+                このタスクを削除
+            </button>
+            <button onclick="closeLongPressModal()" class="w-full py-2.5 text-xs text-slate-400 font-medium mt-1">
+                キャンセル
+            </button>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         モーダル3：タブ（タグ）の追加・削除管理
+    ========================================================== -->
+    <div id="modal-manage-tags" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-slate-800 text-base">🏷️ タブ（タグ）の追加・削除</h3>
+                <button onclick="closeManageTagsModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200">✕</button>
+            </div>
+
+            <!-- 新規タブ（タグ）追加フォーム -->
+            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
+                <label class="block text-xs font-bold text-slate-600">新しいタブ（タグ）を追加</label>
+                <div class="flex gap-2">
+                    <input type="text" id="new-tag-name" maxlength="12" placeholder="例: 買い物、勉強、健康..." class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-400">
+                    <button type="button" onclick="addNewCustomTag()" class="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs shadow-xs transition shrink-0">
+                        追加
+                    </button>
+                </div>
+
+                <!-- カラー選択＆優先度設定 -->
+                <div class="flex items-center justify-between pt-1">
+                    <div class="flex items-center gap-1.5" id="new-tag-color-picker">
+                        <!-- JSで色丸ボタン生成 -->
+                    </div>
+                    <label class="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer select-none">
+                        <input type="checkbox" id="new-tag-priority" class="accent-teal-600 rounded">
+                        <span>優先順位UP対象</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 登録済みタブ（タグ）一覧＆削除 -->
+            <div>
+                <div class="text-[11px] font-bold text-slate-400 mb-2">登録済みのタブ一覧（ゴミ箱で削除）</div>
+                <div id="manage-tags-list" class="space-y-1.5 max-h-52 overflow-y-auto no-scrollbar pr-1">
+                    <!-- JSで一覧生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         モーダル4：セキュリティ＆バックアップ・iCloud保存設定
+    ========================================================== -->
+    <div id="modal-settings" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4 max-h-[88vh] overflow-y-auto">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-slate-800 text-base">データ自動保存 & iCloud連携</h3>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+
+            <!-- スマホ端末内自動保存ステータス -->
+            <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-800 space-y-1">
+                <div class="font-bold flex items-center justify-between">
+                    <span>🛡️ スマホ端末内へ自動保存中</span>
+                    <span id="last-saved-time" class="text-[10px] bg-emerald-200/70 px-2 py-0.5 rounded-full">保存済</span>
+                </div>
+                <p class="leading-relaxed opacity-90">タスクやタグの変更は自動的にスマホ内部へ保存されます。外部サーバーには送信されないため安全です。</p>
+            </div>
+
+            <!-- iCloud Drive & バックアップ書き出し・復元 -->
+            <div class="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-100 text-xs text-indigo-950 space-y-2.5">
+                <div class="font-bold flex items-center justify-between">
+                    <span>☁️ iCloud保存 & バックアップ復元</span>
+                    <span class="px-2 py-0.5 rounded-full bg-indigo-200/70 text-indigo-800 text-[10px]">iOS / Mac対応</span>
+                </div>
+                <p class="leading-relaxed opacity-90">
+                    「iCloudに保存」を押すと共有メニューが開きます。<b>「"ファイル"に保存」→「iCloud Drive」</b>を選ぶとクラウドに安全に保管できます。
+                </p>
+                <div class="grid grid-cols-1 gap-2 pt-1">
+                    <button onclick="saveBackupToICloud()" class="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition shadow-xs flex items-center justify-center gap-1.5">
+                        <span>☁️ iCloud Driveにバックアップ保存</span>
+                    </button>
+                    <button onclick="downloadBackupFile()" class="w-full py-2 px-3 rounded-xl bg-white hover:bg-indigo-100/60 text-indigo-700 border border-indigo-200 font-bold text-xs transition flex items-center justify-center gap-1.5">
+                        <span>📥 端末にバックアップファイルを書き出す</span>
+                    </button>
+                    <label class="w-full py-2 px-3 rounded-xl bg-white hover:bg-indigo-100/60 text-slate-700 border border-slate-200 font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                        <span>📂 iCloud / ファイルから復元する</span>
+                        <input type="file" id="backup-file-input" accept=".json,application/json" class="hidden" onchange="restoreBackupFromFile(event)">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Googleカレンダー連携 -->
+            <div class="p-3.5 rounded-2xl bg-sky-50 border border-sky-100 text-xs text-sky-900 space-y-2">
+                <div class="font-bold flex items-center justify-between">
+                    <span>📅 Googleカレンダー連携（拡張モジュール）</span>
+                    <span class="px-2 py-0.5 rounded-full bg-sky-200/70 text-sky-800 text-[10px]">Ready</span>
+                </div>
+                <p class="leading-relaxed opacity-90">現在のタスクを標準カレンダー形式（.ics）でエクスポートして取り込めます。</p>
+                <button onclick="exportToICS()" class="w-full py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs transition shadow-xs">
+                    Googleカレンダー用データ(.ics)を書き出す
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         カスタム通知メッセージボックス（alert()の代替）
+    ========================================================== -->
+    <div id="toast-box" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-800/95 text-white text-xs font-bold px-5 py-3 rounded-full shadow-xl flex items-center gap-2 transition-all">
+        <span id="toast-icon">🎈</span>
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        /**
+         * ============================================================================
+         * 1. アプリケーション状態＆データ設計（Google Calendar API 互換スキーマ）
+         * ============================================================================
+         */
+        const BALLOON_PALETTE = {
+            rose:    { name: 'コーラルピンク', bg: 'linear-gradient(135deg, #fda4af 0%, #e11d48 100%)', knot: '#be123c', badge: 'bg-rose-100 text-rose-700' },
+            amber:   { name: 'サンシャイン',   bg: 'linear-gradient(135deg, #fcd34d 0%, #d97706 100%)', knot: '#b45309', badge: 'bg-amber-100 text-amber-800' },
+            teal:    { name: 'セージグリーン', bg: 'linear-gradient(135deg, #5eead4 0%, #0d9488 100%)', knot: '#0f766e', badge: 'bg-teal-100 text-teal-800' },
+            sky:     { name: 'スカイブルー',   bg: 'linear-gradient(135deg, #7dd3fc 0%, #0284c7 100%)', knot: '#0369a1', badge: 'bg-sky-100 text-sky-800' },
+            indigo:  { name: 'ラベンダー',     bg: 'linear-gradient(135deg, #a5b4fc 0%, #4f46e5 100%)', knot: '#4338ca', badge: 'bg-indigo-100 text-indigo-800' },
+            emerald: { name: 'ミントリーフ',   bg: 'linear-gradient(135deg, #6ee7b7 0%, #059669 100%)', knot: '#047857', badge: 'bg-emerald-100 text-emerald-800' }
+        };
+
+        // タグ定義（特殊タグ「期限3日以内」「デイリー」＋優先順位UPタグ＋一般タグ）
+        const TAG_CONFIG = [
+            { id: 'due3days',  label: '期限3日以内', color: 'rose',    priorityBoost: true,  isSystem: true, autoOnly: true, desc: '期限3日以内で自動付与' },
+            { id: 'daily',     label: 'デイリー',     color: 'emerald', priorityBoost: false, isSystem: true, autoOnly: false, desc: '毎日7時＆完了3時間後に再表示（今日中専用）' },
+            { id: 'urgent',    label: '緊急',         color: 'rose',    priorityBoost: true },
+            { id: 'important', label: '重要',         color: 'amber',   priorityBoost: true },
+            { id: 'reply',     label: 'メール返信',   color: 'sky',     priorityBoost: true },
+            { id: 'comm',      label: 'やり取りあり', color: 'indigo',  priorityBoost: true },
+            { id: 'work',      label: '仕事',         color: 'teal',    priorityBoost: false },
+            { id: 'private',   label: 'プライベート', color: 'emerald', priorityBoost: false },
+            { id: 'idea',      label: 'アイデア',     color: 'amber',   priorityBoost: false }
+        ];
+
+        // アプリケーション状態（ローカルストレージ自動保存 + インメモリ高速動作）
+        const STORAGE_KEY = 'balloon_task_secure_data_v1';
+
+        let state = {
+            currentView: 'view-home',
+            history: [],
+            listMode: 'today', // 'today' | 'week' | 'month' | 'quarter' | 'tag'
+            referenceDate: new Date(), // カレンダーマークで変更可能な基準日
+            selectedFilterTag: 'all',
+            tasks: [], // Google Calendar API互換スキーマで保持
+            customOrderToday: [], // 今日中のTo Doの手動ドラッグ＆ドロップ順IDリスト
+            activeDetailTaskId: null,
+            detailTapCount: 0,
+            longPressTargetTaskId: null
+        };
+
+        // スマホ端末内ストレージへ自動保存する関数
+        function persistDataToDevice() {
+            try {
+                const payload = {
+                    version: 1,
+                    savedAt: new Date().toISOString(),
+                    tasks: state.tasks,
+                    customOrderToday: state.customOrderToday,
+                    customTags: TAG_CONFIG.filter(t => !t.isSystem && !['urgent', 'important', 'reply', 'comm', 'work', 'private', 'idea'].includes(t.id))
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+                const timeBadge = document.getElementById('last-saved-time');
+                if (timeBadge) {
+                    const now = new Date();
+                    timeBadge.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} 保存済`;
+                }
+            } catch (e) {
+                console.warn('自動保存に失敗しました:', e);
+            }
+        }
+
+        // 起動時にスマホ端末内ストレージからデータを復元する関数
+        function loadDataFromDevice() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return false;
+                const parsed = JSON.parse(raw);
+                if (parsed && Array.isArray(parsed.tasks)) {
+                    state.tasks = parsed.tasks;
+                    state.customOrderToday = Array.isArray(parsed.customOrderToday) ? parsed.customOrderToday : [];
+                    if (Array.isArray(parsed.customTags)) {
+                        parsed.customTags.forEach(ct => {
+                            if (!TAG_CONFIG.some(t => t.label === ct.label)) {
+                                TAG_CONFIG.push(ct);
+                            }
+                        });
+                    }
+                    return true;
+                }
+            } catch (e) {
+                console.warn('保存データの読み込みに失敗しました:', e);
+            }
+            return false;
+        }
+
+        // 初期サンプルタスク生成（今日・今週・今月・今期にすぐ体験できるよう配置）
+        function initSampleTasks() {
+            const today = new Date();
+            const formatOffsetDate = (days) => {
+                const d = new Date(today);
+                d.setDate(d.getDate() + days);
+                return toDateStr(d);
+            };
+
+            state.tasks = [
+                {
+                    id: 'task-1',
+                    summary: 'クライアントへ企画書メール返信',
+                    dueDate: formatOffsetDate(0),
+                    tags: ['メール返信', '重要'],
+                    color: 'sky',
+                    completed: false,
+                    mainChecked: false,
+                    subtasks: [
+                        { id: 'sub-1', title: '見積もり金額の最終確認', dueDate: formatOffsetDate(0), checked: false },
+                        { id: 'sub-2', title: 'PDF添付して送信', dueDate: formatOffsetDate(0), checked: false }
+                    ],
+                    googleCalendarSync: { calendarId: 'primary', eventId: null, syncStatus: 'pending' }
+                },
+                {
+                    id: 'task-daily-1',
+                    summary: '朝のストレッチ＆白湯を飲む',
+                    dueDate: formatOffsetDate(0),
+                    tags: ['デイリー'],
+                    color: 'emerald',
+                    completed: false,
+                    completedAt: null,
+                    lastDailyResetDate: toDateStr(today),
+                    mainChecked: false,
+                    subtasks: [],
+                    googleCalendarSync: { calendarId: 'primary', eventId: null, syncStatus: 'pending' }
+                },
+                {
+                    id: 'task-2',
+                    summary: 'デザインチームの定例アジェンダ作成',
+                    dueDate: formatOffsetDate(0),
+                    tags: ['やり取りあり', '仕事'],
+                    color: 'indigo',
+                    completed: false,
+                    mainChecked: false,
+                    subtasks: [],
+                    googleCalendarSync: { calendarId: 'primary', eventId: null, syncStatus: 'pending' }
+                },
+                {
+                    id: 'task-3',
+                    summary: '今月の経費精算と領収書整理',
+                    dueDate: formatOffsetDate(2),
+                    tags: ['緊急', '仕事'],
+                    color: 'rose',
+                    completed: false,
+                    mainChecked: false,
+                    subtasks: [
+                        { id: 'sub-3', title: '交通費ICカード履歴出力', dueDate: formatOffsetDate(1), checked: false },
+                        { id: 'sub-4', title: '領収書スキャン', dueDate: formatOffsetDate(2), checked: false },
+                        { id: 'sub-5', title: '上長へ申請提出', dueDate: formatOffsetDate(2), checked: false }
+                    ],
+                    googleCalendarSync: { calendarId: 'primary', eventId: null, syncStatus: 'pending' }
+                },
+                {
+                    id: 'task-4',
+                    summary: '来週のプレゼン資料スライド構成',
+                    dueDate: formatOffsetDate(4),
+                    tags: ['重要', '仕事'],
+                    color: 'amber',
+                    completed: false,
+                    mainChecked: false,
+                    subtasks: [],
+                    googleCalendarSync: { calendarId: 'primary', eventId: null, syncStatus: 'pending' }
+                },
+                {
+                    id: 'task-5',
+                    summary: '読書：UXデザイン思考の本を完読する',
+                    dueDate: formatOffsetDate(18),
+                    tags: ['プライベート', 'アイデア'],
+                    color: 'emerald',
+                    completed: false,
+                    mainChecked: false,
+                    subtasks: [],
+                    googleCalendarSync: { calendarId: 'primary', eventId: null, syncStatus: 'pending' }
+                }
+            ];
+            syncSpecialTagsAndDailyState();
+            updateCategoryBadges();
+            persistDataToDevice();
+        }
+
+        /**
+         * 特殊タブ（「期限3日以内」「デイリー」）の自動付与・定期再出現ロジック
+         * - 期限が3日以内になったタスクへ「期限3日以内」タグを自動付与（4日以上先は自動解除）
+         * - 「デイリー」タグ付きタスクは毎日朝7時に1回再表示＆完了後3時間経過で再表示
+         */
+        function syncSpecialTagsAndDailyState() {
+            const now = new Date();
+            const todayStr = toDateStr(now);
+
+            // 今日の午前7時のタイムスタンプを取得
+            const today7AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 7, 0, 0, 0);
+
+            state.tasks.forEach(task => {
+                const isDaily = task.tags.includes('デイリー');
+
+                // 1. 「デイリー」の再表示判定
+                if (isDaily) {
+                    // 毎日朝7時以降の初回リセット判定
+                    if (now >= today7AM && task.lastDailyResetDate !== todayStr) {
+                        task.completed = false;
+                        task.mainChecked = false;
+                        task.subtasks.forEach(s => s.checked = false);
+                        task.completedAt = null;
+                        task.lastDailyResetDate = todayStr;
+                    }
+                    // タスク完了後、3時間（10,800,000ミリ秒）経過したら再度未完了として表示
+                    if (task.completed && task.completedAt) {
+                        const elapsedMs = now.getTime() - new Date(task.completedAt).getTime();
+                        if (elapsedMs >= 3 * 60 * 60 * 1000) {
+                            task.completed = false;
+                            task.mainChecked = false;
+                            task.subtasks.forEach(s => s.checked = false);
+                            task.completedAt = null;
+                        }
+                    }
+                }
+
+                // 2. 「期限3日以内」の自動付与・解除判定（未完了タスク対象）
+                if (!task.completed && task.dueDate) {
+                    const daysLeft = getDaysDiffFromRef(task.dueDate, now);
+                    const has3DaysTag = task.tags.includes('期限3日以内');
+                    if (daysLeft <= 3) {
+                        if (!has3DaysTag) {
+                            task.tags.unshift('期限3日以内');
+                        }
+                    } else {
+                        if (has3DaysTag) {
+                            task.tags = task.tags.filter(t => t !== '期限3日以内');
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * ============================================================================
+         * 2. 効果音（Web Audio API による優しい風船の膨らみ音・破裂音）
+         * ============================================================================
+         */
+        let audioCtx = null;
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            return audioCtx;
+        }
+
+        function playTapInflateSound(step) {
+            try {
+                const ctx = getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                const baseFreq = step === 1 ? 320 : 440;
+                osc.frequency.setValueAtTime(baseFreq, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.35, ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.14);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+            } catch (e) {}
+        }
+
+        function playPopSound() {
+            try {
+                const ctx = getAudioContext();
+                const bufferSize = ctx.sampleRate * 0.18;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.03));
+                }
+                const noise = ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 900;
+
+                const gain = ctx.createGain();
+                gain.gain.setValueAtTime(0.45, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.17);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(ctx.destination);
+                noise.start();
+            } catch (e) {}
+        }
+
+        /**
+         * ============================================================================
+         * 3. 日付ユーティリティ＆優先順位アルゴリズム
+         * ============================================================================
+         */
+        function toDateStr(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function parseDateStr(str) {
+            const [y, m, d] = str.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        }
+
+        function getDaysDiffFromRef(dueDateStr, refDate) {
+            const due = parseDateStr(dueDateStr);
+            const ref = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate());
+            return Math.round((due - ref) / (1000 * 60 * 60 * 24));
+        }
+
+        // 年度初め(4月)基準の四半期(1期〜4期)計算
+        function getFiscalQuarter(dateObj) {
+            const m = dateObj.getMonth() + 1; // 1..12
+            if (m >= 4 && m <= 6) return 1;
+            if (m >= 7 && m <= 9) return 2;
+            if (m >= 10 && m <= 12) return 3;
+            return 4; // 1月〜3月
+        }
+
+        // 週の開始(月曜)と終了(日曜)を取得
+        function getWeekRange(refDate) {
+            const d = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate());
+            const day = d.getDay(); // 0(日)..6(土)
+            const diffToMon = day === 0 ? -6 : 1 - day;
+            const start = new Date(d);
+            start.setDate(d.getDate() + diffToMon);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            return { start, end };
+        }
+
+        /**
+         * 優先順位ソート関数
+         * ① 期限が近いかどうか（昇順）
+         * ② 優先タグ（「やり取りあり」「メール返信」「重要」「緊急」などpriorityBoostがtrueのタグ）があるかどうか
+         * ③ サブタスクの数が多いかどうか（降順）
+         */
+        function sortTasksByPriority(tasks, refDate) {
+            const priorityTags = TAG_CONFIG.filter(t => t.priorityBoost).map(t => t.label);
+            return [...tasks].sort((a, b) => {
+                // ① 期限の近さ
+                const diffA = getDaysDiffFromRef(a.dueDate, refDate);
+                const diffB = getDaysDiffFromRef(b.dueDate, refDate);
+                if (diffA !== diffB) return diffA - diffB;
+
+                // ② 優先タグの有無
+                const hasPrioA = a.tags.some(t => priorityTags.includes(t)) ? 1 : 0;
+                const hasPrioB = b.tags.some(t => priorityTags.includes(t)) ? 1 : 0;
+                if (hasPrioA !== hasPrioB) return hasPrioB - hasPrioA;
+
+                // ③ サブタスクの多さ
+                return (b.subtasks?.length || 0) - (a.subtasks?.length || 0);
+            });
+        }
+
+        /**
+         * ============================================================================
+         * 4. 画面遷移管理（履歴スタック付き）
+         * ============================================================================
+         */
+        function navigateTo(viewId, pushHistory = true) {
+            if (pushHistory && state.currentView !== viewId) {
+                state.history.push(state.currentView);
+            }
+            state.currentView = viewId;
+
+            ['view-home', 'view-categories', 'view-list', 'view-create'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+
+            const backBtn = document.getElementById('btn-back');
+            const spacer = document.getElementById('header-spacer');
+            if (viewId === 'view-home') {
+                backBtn.classList.add('hidden');
+                backBtn.classList.remove('flex');
+                spacer.classList.remove('hidden');
+            } else {
+                backBtn.classList.remove('hidden');
+                backBtn.classList.add('flex');
+                spacer.classList.add('hidden');
+            }
+
+            if (viewId === 'view-categories') {
+                updateCategoryBadges();
+            }
+        }
+
+        function navigateBack() {
+            const prev = state.history.pop() || 'view-home';
+            navigateTo(prev, false);
+        }
+
+        function showToast(msg, icon = '🎈') {
+            const box = document.getElementById('toast-box');
+            document.getElementById('toast-icon').textContent = icon;
+            document.getElementById('toast-message').textContent = msg;
+            box.classList.remove('hidden');
+            clearTimeout(box._timer);
+            box._timer = setTimeout(() => {
+                box.classList.add('hidden');
+            }, 2600);
+        }
+
+        /**
+         * ============================================================================
+         * 5. カテゴリのバッジ更新＆一覧画面の初期化
+         * ============================================================================
+         */
+        function filterTasksForMode(mode, refDate, tagFilter = 'all') {
+            syncSpecialTagsAndDailyState();
+            const active = state.tasks.filter(t => !t.completed);
+            const refStr = toDateStr(refDate);
+
+            if (mode === 'today') {
+                // 「今日中のTo Do」には当日期限タスクに加えて「デイリー」タスクも表示
+                return active.filter(t => t.dueDate === refStr || t.tags.includes('デイリー'));
+            }
+
+            // 「今日中」以外のページでは、「デイリー」タグの付いた項目を除外する
+            const nonDailyActive = active.filter(t => !t.tags.includes('デイリー'));
+
+            if (mode === 'week') {
+                const { start, end } = getWeekRange(refDate);
+                return nonDailyActive.filter(t => {
+                    const d = parseDateStr(t.dueDate);
+                    return d >= start && d <= end;
+                });
+            }
+            if (mode === 'month') {
+                const y = refDate.getFullYear();
+                const m = refDate.getMonth();
+                return nonDailyActive.filter(t => {
+                    const d = parseDateStr(t.dueDate);
+                    return d.getFullYear() === y && d.getMonth() === m;
+                });
+            }
+            if (mode === 'quarter') {
+                const targetQ = getFiscalQuarter(refDate);
+                const y = refDate.getFullYear();
+                const fiscalYear = (refDate.getMonth() + 1) >= 4 ? y : y - 1;
+                return nonDailyActive.filter(t => {
+                    const d = parseDateStr(t.dueDate);
+                    const dFY = (d.getMonth() + 1) >= 4 ? d.getFullYear() : d.getFullYear() - 1;
+                    return dFY === fiscalYear && getFiscalQuarter(d) === targetQ;
+                });
+            }
+            if (mode === 'tag') {
+                if (tagFilter === 'all') return nonDailyActive;
+                return nonDailyActive.filter(t => t.tags.includes(tagFilter));
+            }
+            return nonDailyActive;
+        }
+
+        function updateCategoryBadges() {
+            const now = new Date();
+            document.getElementById('badge-today').textContent = filterTasksForMode('today', now).length;
+            document.getElementById('badge-week').textContent = filterTasksForMode('week', now).length;
+            document.getElementById('badge-month').textContent = filterTasksForMode('month', now).length;
+            document.getElementById('badge-quarter').textContent = filterTasksForMode('quarter', now).length;
+        }
+
+        function openTaskList(mode) {
+            state.listMode = mode;
+            state.referenceDate = new Date();
+            state.selectedFilterTag = 'all';
+            navigateTo('view-list');
+            renderTaskList();
+        }
+
+        // カレンダーマーク押下時
+        function openDatePicker() {
+            const picker = document.getElementById('hidden-date-picker');
+            picker.value = toDateStr(state.referenceDate);
+            if (picker.showPicker) {
+                picker.showPicker();
+            } else {
+                picker.click();
+            }
+        }
+
+        function onDatePicked(val) {
+            if (!val) return;
+            state.referenceDate = parseDateStr(val);
+            renderTaskList();
+            showToast(`${state.referenceDate.getMonth() + 1}月${state.referenceDate.getDate()}日の表示に切り替えました`, '📅');
+        }
+
+        /**
+         * ============================================================================
+         * 6. 風船リストのレンダリング（3つずつ縦列 / 週間曜日別 / D&D / 長押し）
+         * ============================================================================
+         */
+        function renderTaskList() {
+            const ref = state.referenceDate;
+            const m = ref.getMonth() + 1;
+            const d = ref.getDate();
+            const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+            const w = weekdays[ref.getDay()];
+
+            const titleEl = document.getElementById('list-title');
+            const hintEl = document.getElementById('list-hint-bar');
+            const tagBar = document.getElementById('tag-filter-bar');
+            const container = document.getElementById('balloon-container');
+
+            tagBar.classList.add('hidden');
+            container.innerHTML = '';
+
+            // タイトルとヒントの切り替え
+            if (state.listMode === 'today') {
+                titleEl.textContent = `${m}月${d}日のTo do一覧`;
+                hintEl.textContent = 'ドラッグ＆ドロップで風船を自由に動かせます・タップで詳細';
+            } else if (state.listMode === 'week') {
+                titleEl.textContent = `${m}月${d}日(${w}) 今週中のTo Do`;
+                hintEl.textContent = '風船を長押しで「来週に回す」「2週間後に回す」「削除」';
+            } else if (state.listMode === 'month') {
+                titleEl.textContent = `${m}月のTo do一覧`;
+                hintEl.textContent = '優先順位が高い順に並んでいます・期限が近いほどパンパン！';
+            } else if (state.listMode === 'quarter') {
+                const q = getFiscalQuarter(ref);
+                titleEl.textContent = `第${q}期のTo do`;
+                hintEl.textContent = '4月始まり四半期ごとのTo Do・優先順位順';
+            } else if (state.listMode === 'tag') {
+                titleEl.textContent = `タグ別To do一覧`;
+                hintEl.textContent = 'タグをタップして絞り込み・風船タップで詳細';
+                renderTagFilterBar();
+                tagBar.classList.remove('hidden');
+            }
+
+            let tasks = filterTasksForMode(state.listMode, ref, state.selectedFilterTag);
+
+            if (tasks.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-16 text-center opacity-70">
+                        <div class="text-4xl mb-3">🌤️</div>
+                        <p class="text-sm font-bold text-slate-600">この期間の風船はありません</p>
+                        <p class="text-xs text-slate-400 mt-1">「やることを記憶」から新しい風船を飛ばしましょう</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // 「1週間中のTo Do」は「〇曜日までのタスク」ごとに期限昇順でグループ化
+            if (state.listMode === 'week') {
+                const sorted = sortTasksByPriority(tasks, ref);
+                const groups = {};
+                sorted.forEach(t => {
+                    if (!groups[t.dueDate]) groups[t.dueDate] = [];
+                    groups[t.dueDate].push(t);
+                });
+
+                Object.keys(groups).sort().forEach(dateKey => {
+                    const dt = parseDateStr(dateKey);
+                    const dayName = weekdays[dt.getDay()];
+                    const section = document.createElement('div');
+                    section.className = 'space-y-3';
+                    section.innerHTML = `
+                        <div class="flex items-center gap-2 px-2">
+                            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                            <h3 class="text-xs font-bold text-slate-600">${dayName}曜日までのタスク（${dt.getMonth() + 1}/${dt.getDate()}）</h3>
+                        </div>
+                    `;
+                    const grid = createThreeColumnBalloonGrid(groups[dateKey], ref);
+                    section.appendChild(grid);
+                    container.appendChild(section);
+                });
+                return;
+            }
+
+            // 「今日中のTo Do」はカスタムD&D順があれば反映、なければ優先順位順
+            if (state.listMode === 'today') {
+                const prioSorted = sortTasksByPriority(tasks, ref);
+                if (state.customOrderToday.length > 0) {
+                    prioSorted.sort((a, b) => {
+                        const idxA = state.customOrderToday.indexOf(a.id);
+                        const idxB = state.customOrderToday.indexOf(b.id);
+                        if (idxA === -1 && idxB === -1) return 0;
+                        if (idxA === -1) return 1;
+                        if (idxB === -1) return -1;
+                        return idxA - idxB;
+                    });
+                }
+                container.appendChild(createThreeColumnBalloonGrid(prioSorted, ref));
+                return;
+            }
+
+            // 「1か月」「3か月」「タグ別」は優先順位順に3つずつ並べる
+            const sorted = sortTasksByPriority(tasks, ref);
+            container.appendChild(createThreeColumnBalloonGrid(sorted, ref));
+        }
+
+        function renderTagFilterBar() {
+            const bar = document.getElementById('tag-filter-bar');
+            bar.innerHTML = '';
+
+            // 先頭に「＋ 追加・削除」管理ボタンを配置
+            const manageBtn = document.createElement('button');
+            manageBtn.className = 'px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap bg-teal-600 text-white shadow-xs hover:bg-teal-500 transition shrink-0 flex items-center gap-1';
+            manageBtn.innerHTML = '<span>＋ 追加・削除</span>';
+            manageBtn.onclick = () => openManageTagsModal();
+            bar.appendChild(manageBtn);
+
+            const allBtn = document.createElement('button');
+            allBtn.className = `px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shrink-0 ${
+                state.selectedFilterTag === 'all' ? 'bg-slate-700 text-white shadow-xs' : 'bg-white/80 text-slate-600'
+            }`;
+            allBtn.textContent = 'すべて';
+            allBtn.onclick = () => { state.selectedFilterTag = 'all'; renderTaskList(); };
+            bar.appendChild(allBtn);
+
+            // 「デイリー」は今日中のTo Do専用のため、タグ別ページでは除外して表示
+            TAG_CONFIG.filter(tag => tag.label !== 'デイリー').forEach(tag => {
+                const btn = document.createElement('button');
+                const isSelected = state.selectedFilterTag === tag.label;
+                btn.className = `px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition shrink-0 ${
+                    isSelected ? 'bg-teal-700 text-white shadow-xs' : 'bg-white/80 text-slate-600 hover:bg-white'
+                }`;
+                btn.textContent = tag.label;
+                btn.onclick = () => { state.selectedFilterTag = tag.label; renderTaskList(); };
+                bar.appendChild(btn);
+            });
+        }
+
+        /**
+         * 風船を3つずつ縦に並べるグリッド生成（空気圧パンパン度計算・D&D・長押し対応）
+         */
+        function createThreeColumnBalloonGrid(taskList, refDate) {
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-3 gap-x-2.5 gap-y-5 px-1 pt-2';
+
+            taskList.forEach((task, index) => {
+                const daysLeft = getDaysDiffFromRef(task.dueDate, refDate);
+
+                // 期限が近いほど空気圧パンパン（スケール・光沢・シャドウ強化）
+                let scaleClass = 'scale-95';
+                let tensionStyle = '';
+                if (daysLeft <= 0) {
+                    scaleClass = 'scale-105';
+                    tensionStyle = 'box-shadow: inset -6px -8px 16px rgba(0,0,0,0.18), inset 6px 8px 18px rgba(255,255,255,0.65), 0 12px 22px -6px rgba(225,29,72,0.35);';
+                } else if (daysLeft <= 2) {
+                    scaleClass = 'scale-100';
+                    tensionStyle = 'box-shadow: inset -5px -6px 14px rgba(0,0,0,0.15), inset 5px 6px 14px rgba(255,255,255,0.55), 0 10px 18px -6px rgba(15,118,110,0.25);';
+                } else if (daysLeft <= 7) {
+                    scaleClass = 'scale-95';
+                    tensionStyle = 'box-shadow: inset -4px -5px 12px rgba(0,0,0,0.12), inset 4px 5px 12px rgba(255,255,255,0.45), 0 8px 14px -6px rgba(71,85,105,0.2);';
+                } else {
+                    scaleClass = 'scale-90 opacity-95';
+                    tensionStyle = 'box-shadow: inset -3px -4px 10px rgba(0,0,0,0.1), inset 3px 4px 10px rgba(255,255,255,0.35);';
+                }
+
+                // タグまたは設定色から風船カラー決定
+                const palette = resolveTaskBalloonColor(task);
+                const delayClass = `balloon-float-delay-${index % 3}`;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = `flex flex-col items-center balloon-float ${delayClass} ${scaleClass} transition-transform`;
+                wrapper.dataset.taskId = task.id;
+
+                // 「今日中のTo Do」モード：ドラッグ＆ドロップ（PC & スマホタッチ両対応）
+                if (state.listMode === 'today') {
+                    setupDragAndDrop(wrapper, task.id, taskList);
+                }
+
+                // 「1週間中のTo Do」モード：長押しメニュー（来週・2週間後・削除）
+                if (state.listMode === 'week') {
+                    setupLongPress(wrapper, task);
+                }
+
+                const balloonBody = document.createElement('div');
+                balloonBody.className = 'balloon-body w-24 h-28 sm:w-26 sm:h-30 flex flex-col items-center justify-center p-2.5 text-center text-white select-none';
+                balloonBody.style.background = palette.bg;
+                balloonBody.style.cssText += tensionStyle;
+
+                // 期限バッジ
+                const dueLabel = daysLeft < 0 ? '期限超過' : daysLeft === 0 ? '今日' : `あと${daysLeft}日`;
+                const subCount = task.subtasks?.length || 0;
+                const doneSubCount = task.subtasks?.filter(s => s.checked).length || 0;
+
+                // サニタイズして安全にテキスト挿入
+                const badgeSpan = document.createElement('span');
+                badgeSpan.className = 'text-[9px] font-bold bg-black/20 px-1.5 py-0.5 rounded-full mb-1 backdrop-blur-2xs';
+                badgeSpan.textContent = dueLabel;
+
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'text-[11px] font-bold leading-snug line-clamp-2 drop-shadow-xs';
+                titleSpan.textContent = task.summary;
+
+                balloonBody.appendChild(badgeSpan);
+                balloonBody.appendChild(titleSpan);
+
+                if (subCount > 0) {
+                    const subBadge = document.createElement('span');
+                    subBadge.className = 'text-[9px] mt-1 opacity-90 bg-white/20 px-1.5 rounded-full';
+                    subBadge.textContent = `✓ ${doneSubCount}/${subCount}`;
+                    balloonBody.appendChild(subBadge);
+                }
+
+                // タップで詳細モーダルを開く
+                balloonBody.addEventListener('click', (e) => {
+                    if (wrapper.dataset.longPressed === 'true') {
+                        wrapper.dataset.longPressed = 'false';
+                        return;
+                    }
+                    openDetailModal(task.id);
+                });
+
+                const knot = document.createElement('div');
+                knot.className = 'balloon-knot';
+                knot.style.backgroundColor = palette.knot;
+
+                const str = document.createElement('div');
+                str.className = 'balloon-string';
+
+                wrapper.appendChild(balloonBody);
+                wrapper.appendChild(knot);
+                wrapper.appendChild(str);
+                grid.appendChild(wrapper);
+            });
+
+            return grid;
+        }
+
+        function resolveTaskBalloonColor(task) {
+            if (task.color && BALLOON_PALETTE[task.color]) {
+                return BALLOON_PALETTE[task.color];
+            }
+            const matchedTag = TAG_CONFIG.find(t => task.tags.includes(t.label));
+            return BALLOON_PALETTE[matchedTag ? matchedTag.color : 'teal'];
+        }
+
+        /**
+         * ============================================================================
+         * 7. ドラッグ＆ドロップ（「今日中のTo Do」自由並べ替え）
+         * ============================================================================
+         */
+        let draggedTaskId = null;
+
+        function setupDragAndDrop(el, taskId, currentTaskList) {
+            el.setAttribute('draggable', 'true');
+
+            el.addEventListener('dragstart', (e) => {
+                draggedTaskId = taskId;
+                el.classList.add('dragging-balloon');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            el.addEventListener('dragend', () => {
+                draggedTaskId = null;
+                el.classList.remove('dragging-balloon');
+                document.querySelectorAll('.drag-over-target').forEach(node => node.classList.remove('drag-over-target'));
+            });
+
+            el.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (draggedTaskId && draggedTaskId !== taskId) {
+                    el.classList.add('drag-over-target');
+                }
+            });
+
+            el.addEventListener('dragleave', () => {
+                el.classList.remove('drag-over-target');
+            });
+
+            el.addEventListener('drop', (e) => {
+                e.preventDefault();
+                el.classList.remove('drag-over-target');
+                if (draggedTaskId && draggedTaskId !== taskId) {
+                    reorderTodayTasks(draggedTaskId, taskId, currentTaskList);
+                }
+            });
+
+            // スマホタッチデバイス用スワップ操作
+            let touchTimer = null;
+            el.addEventListener('touchstart', (e) => {
+                touchTimer = setTimeout(() => {
+                    draggedTaskId = taskId;
+                    el.classList.add('dragging-balloon');
+                }, 280);
+            }, { passive: true });
+
+            el.addEventListener('touchmove', (e) => {
+                if (!draggedTaskId) {
+                    clearTimeout(touchTimer);
+                    return;
+                }
+                const touch = e.touches[0];
+                const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('[data-task-id]');
+                document.querySelectorAll('.drag-over-target').forEach(node => node.classList.remove('drag-over-target'));
+                if (target && target.dataset.taskId !== draggedTaskId) {
+                    target.classList.add('drag-over-target');
+                }
+            }, { passive: true });
+
+            el.addEventListener('touchend', (e) => {
+                clearTimeout(touchTimer);
+                if (!draggedTaskId) return;
+                const touch = e.changedTouches[0];
+                const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('[data-task-id]');
+                el.classList.remove('dragging-balloon');
+                document.querySelectorAll('.drag-over-target').forEach(node => node.classList.remove('drag-over-target'));
+                if (target && target.dataset.taskId && target.dataset.taskId !== draggedTaskId) {
+                    reorderTodayTasks(draggedTaskId, target.dataset.taskId, currentTaskList);
+                }
+                draggedTaskId = null;
+            });
+        }
+
+        function reorderTodayTasks(fromId, toId, currentTaskList) {
+            const currentIds = currentTaskList.map(t => t.id);
+            const fromIdx = currentIds.indexOf(fromId);
+            const toIdx = currentIds.indexOf(toId);
+            if (fromIdx !== -1 && toIdx !== -1) {
+                currentIds.splice(fromIdx, 1);
+                currentIds.splice(toIdx, 0, fromId);
+                state.customOrderToday = currentIds;
+                persistDataToDevice();
+                renderTaskList();
+                showToast('風船の位置を並べ替えました', '🎈');
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 8. 詳細モーダル＆チェック確認＆3回タップ風船破裂ロジック
+         * ============================================================================
+         */
+        function openDetailModal(taskId) {
+            const task = state.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            state.activeDetailTaskId = taskId;
+            state.detailTapCount = 0;
+
+            const palette = resolveTaskBalloonColor(task);
+            const visual = document.getElementById('detail-balloon-visual');
+            visual.style.background = palette.bg;
+            visual.classList.remove('balloon-tap-1', 'balloon-tap-2', 'balloon-popping');
+            document.getElementById('detail-balloon-knot').style.backgroundColor = palette.knot;
+
+            document.getElementById('detail-balloon-title').textContent = task.summary;
+            document.getElementById('detail-due-date').textContent = task.dueDate;
+
+            const tagsContainer = document.getElementById('detail-tags');
+            tagsContainer.innerHTML = '';
+            task.tags.forEach(tagLabel => {
+                const span = document.createElement('span');
+                span.className = 'px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-bold';
+                span.textContent = tagLabel;
+                tagsContainer.appendChild(span);
+            });
+
+            renderDetailChecklist(task);
+            updateDetailInstruction(task);
+            document.getElementById('modal-detail').classList.remove('hidden');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('modal-detail').classList.add('hidden');
+            state.activeDetailTaskId = null;
+            state.detailTapCount = 0;
+        }
+
+        function renderDetailChecklist(task) {
+            const container = document.getElementById('detail-checklist-container');
+            container.innerHTML = '';
+
+            // サブタスクがない場合は、メインタスク自体のチェックボックスを左に配置
+            if (!task.subtasks || task.subtasks.length === 0) {
+                const row = document.createElement('label');
+                row.className = 'flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-teal-50/60 cursor-pointer border border-slate-100 transition';
+
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = task.mainChecked;
+                cb.className = 'w-5 h-5 accent-teal-600 rounded cursor-pointer';
+                cb.onchange = () => {
+                    task.mainChecked = cb.checked;
+                    state.detailTapCount = 0;
+                    persistDataToDevice();
+                    resetBalloonTapVisual();
+                    updateDetailInstruction(task);
+                };
+
+                const text = document.createElement('span');
+                text.className = `text-sm font-bold ${task.mainChecked ? 'line-through text-slate-400' : 'text-slate-700'}`;
+                text.textContent = task.summary;
+
+                row.appendChild(cb);
+                row.appendChild(text);
+                container.appendChild(row);
+                return;
+            }
+
+            // サブタスクがある場合：各サブタスクの左にチェックマークを配置
+            task.subtasks.forEach(sub => {
+                const row = document.createElement('label');
+                row.className = 'flex items-center justify-between gap-2 p-3 rounded-2xl bg-slate-50 hover:bg-teal-50/60 cursor-pointer border border-slate-100 transition';
+
+                const left = document.createElement('div');
+                left.className = 'flex items-center gap-3';
+
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = sub.checked;
+                cb.className = 'w-5 h-5 accent-teal-600 rounded cursor-pointer shrink-0';
+                cb.onchange = () => {
+                    sub.checked = cb.checked;
+                    state.detailTapCount = 0;
+                    persistDataToDevice();
+                    resetBalloonTapVisual();
+                    renderDetailChecklist(task);
+                    updateDetailInstruction(task);
+                };
+
+                const text = document.createElement('span');
+                text.className = `text-xs font-bold ${sub.checked ? 'line-through text-slate-400' : 'text-slate-700'}`;
+                text.textContent = sub.title;
+
+                left.appendChild(cb);
+                left.appendChild(text);
+                row.appendChild(left);
+
+                if (sub.dueDate) {
+                    const dBadge = document.createElement('span');
+                    const isTodaySub = sub.dueDate === toDateStr(state.referenceDate);
+                    dBadge.className = `text-[10px] px-2 py-0.5 rounded-full shrink-0 font-bold ${
+                        isTodaySub ? 'bg-rose-100 text-rose-700' : 'bg-slate-200/70 text-slate-600'
+                    }`;
+                    dBadge.textContent = sub.dueDate.slice(5).replace('-', '/');
+                    row.appendChild(dBadge);
+                }
+
+                container.appendChild(row);
+            });
+        }
+
+        /**
+         * 風船を割る条件の判定
+         * - サブタスクなし：mainChecked が true
+         * - サブタスク複数あり：原則すべて checked が true
+         * - 例外：「今日中のTo Do」モードのみ、期限当日(referenceDate)に設定されたサブタスクにチェックが付いただけで割れる
+         */
+        function canPopBalloon(task) {
+            if (!task.subtasks || task.subtasks.length === 0) {
+                return task.mainChecked === true;
+            }
+            const allChecked = task.subtasks.every(s => s.checked);
+            if (allChecked) return true;
+
+            if (state.listMode === 'today') {
+                const todayStr = toDateStr(state.referenceDate);
+                const todaySubtasks = task.subtasks.filter(s => s.dueDate === todayStr);
+                if (todaySubtasks.length > 0 && todaySubtasks.every(s => s.checked)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function updateDetailInstruction(task) {
+            const hintEl = document.getElementById('detail-tap-counter-text');
+            const tapBadge = document.getElementById('detail-balloon-tap-hint');
+            if (!canPopBalloon(task)) {
+                hintEl.textContent = '左のチェックを入れてから風船を3回タップ！';
+                hintEl.className = 'text-xs font-bold text-slate-400 mt-1';
+                tapBadge.textContent = '未チェック';
+            } else {
+                const remain = 3 - state.detailTapCount;
+                hintEl.textContent = `準備OK！あと ${remain} 回タップで風船が割れます！`;
+                hintEl.className = 'text-xs font-bold text-rose-600 mt-1 animate-pulse';
+                tapBadge.textContent = `あと${remain}回タップ`;
+            }
+        }
+
+        function resetBalloonTapVisual() {
+            const visual = document.getElementById('detail-balloon-visual');
+            visual.classList.remove('balloon-tap-1', 'balloon-tap-2', 'balloon-popping');
+        }
+
+        function handleDetailBalloonTap() {
+            const task = state.tasks.find(t => t.id === state.activeDetailTaskId);
+            if (!task) return;
+
+            if (!canPopBalloon(task)) {
+                showToast('先に左のチェックマークを入れてください', '☑️');
+                return;
+            }
+
+            state.detailTapCount += 1;
+            const visual = document.getElementById('detail-balloon-visual');
+
+            if (state.detailTapCount === 1) {
+                playTapInflateSound(1);
+                visual.classList.add('balloon-tap-1');
+                updateDetailInstruction(task);
+            } else if (state.detailTapCount === 2) {
+                playTapInflateSound(2);
+                visual.classList.remove('balloon-tap-1');
+                visual.classList.add('balloon-tap-2');
+                updateDetailInstruction(task);
+            } else if (state.detailTapCount >= 3) {
+                // 3回目タップで風船破裂＆タスク完了！
+                playPopSound();
+                visual.classList.remove('balloon-tap-2');
+                visual.classList.add('balloon-popping');
+                task.completed = true;
+                task.completedAt = new Date().toISOString();
+                persistDataToDevice();
+                
+                const isDaily = task.tags.includes('デイリー');
+                setTimeout(() => {
+                    closeDetailModal();
+                    renderTaskList();
+                    updateCategoryBadges();
+                    if (isDaily) {
+                        showToast('デイリー完了！3時間後にまた出現します', '🔄');
+                    } else {
+                        showToast('パチン！タスクを完了しました！', '🎉');
+                    }
+                }, 360);
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 9. 「1週間中のTo Do」長押しアクション（来週・2週間後・削除）
+         * ============================================================================
+         */
+        function setupLongPress(el, task) {
+            let timer = null;
+            const startPress = () => {
+                el.dataset.longPressed = 'false';
+                timer = setTimeout(() => {
+                    el.dataset.longPressed = 'true';
+                    openLongPressModal(task);
+                }, 550);
+            };
+            const cancelPress = () => clearTimeout(timer);
+
+            el.addEventListener('mousedown', startPress);
+            el.addEventListener('mouseup', cancelPress);
+            el.addEventListener('mouseleave', cancelPress);
+            el.addEventListener('touchstart', startPress, { passive: true });
+            el.addEventListener('touchend', cancelPress);
+            el.addEventListener('touchmove', cancelPress, { passive: true });
+        }
+
+        function openLongPressModal(task) {
+            state.longPressTargetTaskId = task.id;
+            document.getElementById('longpress-task-title').textContent = task.summary;
+            document.getElementById('modal-longpress').classList.remove('hidden');
+        }
+
+        function closeLongPressModal() {
+            document.getElementById('modal-longpress').classList.add('hidden');
+            state.longPressTargetTaskId = null;
+        }
+
+        function deferTaskWeeks(weeks) {
+            const task = state.tasks.find(t => t.id === state.longPressTargetTaskId);
+            if (!task) return;
+            const d = parseDateStr(task.dueDate);
+            d.setDate(d.getDate() + weeks * 7);
+            task.dueDate = toDateStr(d);
+            // サブタスクの期限も連動してシフト
+            if (task.subtasks) {
+                task.subtasks.forEach(s => {
+                    if (s.dueDate) {
+                        const sd = parseDateStr(s.dueDate);
+                        sd.setDate(sd.getDate() + weeks * 7);
+                        s.dueDate = toDateStr(sd);
+                    }
+                });
+            }
+            syncSpecialTagsAndDailyState();
+            persistDataToDevice();
+            closeLongPressModal();
+            renderTaskList();
+            updateCategoryBadges();
+            showToast(`${weeks === 1 ? '来週' : '2週間後'}のタスクリストに回しました`, '🗓️');
+        }
+
+        function deleteTaskFromLongPress() {
+            if (!state.longPressTargetTaskId) return;
+            state.tasks = state.tasks.filter(t => t.id !== state.longPressTargetTaskId);
+            persistDataToDevice();
+            closeLongPressModal();
+            renderTaskList();
+            updateCategoryBadges();
+            showToast('タスクを削除しました', '🗑️');
+        }
+
+        /**
+         * ============================================================================
+         * 10. 「やることを記憶」メモ帳入力＆飛んでいく風船アニメーション
+         * ============================================================================
+         */
+        let createFormState = {
+            selectedTags: [],
+            selectedColor: 'teal'
+        };
+
+        function openCreateView() {
+            // フォーム初期化
+            document.getElementById('input-task-title').value = '';
+            document.getElementById('input-due-date').value = toDateStr(new Date());
+            document.getElementById('input-due-days').value = '0';
+            document.getElementById('subtask-inputs-container').innerHTML = '';
+            createFormState.selectedTags = [];
+            createFormState.selectedColor = 'teal';
+
+            const notepad = document.getElementById('notepad-card');
+            notepad.classList.remove('animate-memo-shrink');
+
+            renderCreateFormSelectors();
+            navigateTo('view-create');
+        }
+
+        function syncDaysToDate(daysVal) {
+            const days = parseInt(daysVal, 10);
+            if (isNaN(days) || days < 0) return;
+            const target = new Date();
+            target.setDate(target.getDate() + days);
+            document.getElementById('input-due-date').value = toDateStr(target);
+        }
+
+        function addSubtaskInputRow() {
+            const container = document.getElementById('subtask-inputs-container');
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-1.5 bg-amber-50/70 p-1.5 rounded-xl border border-amber-200/60';
+            row.innerHTML = `
+                <input type="text" placeholder="サブタスク内容" class="subtask-title-input flex-1 bg-transparent text-xs font-medium text-slate-700 px-1.5 focus:outline-none">
+                <input type="date" value="${document.getElementById('input-due-date').value}" class="subtask-date-input bg-white/80 border border-amber-200 rounded-lg px-1.5 py-0.5 text-[10px] text-slate-600">
+                <button type="button" onclick="this.parentElement.remove()" class="text-slate-400 hover:text-rose-500 px-1 text-xs">✕</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function renderCreateFormSelectors() {
+            // タグ（複数選択可・自動付与専用の「期限3日以内」は手動選択から除外）
+            const tagsBox = document.getElementById('create-tags-container');
+            tagsBox.innerHTML = '';
+            TAG_CONFIG.filter(tag => !tag.autoOnly).forEach(tag => {
+                const isSelected = createFormState.selectedTags.includes(tag.label);
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `px-2.5 py-1 rounded-full text-[11px] font-bold border transition ${
+                    isSelected
+                        ? 'bg-teal-600 text-white border-teal-600 shadow-2xs'
+                        : 'bg-white/80 text-slate-600 border-slate-200 hover:bg-white'
+                }`;
+                btn.textContent = tag.label === 'デイリー' ? '🔄 デイリー' : tag.label;
+                btn.onclick = () => {
+                    if (isSelected) {
+                        createFormState.selectedTags = createFormState.selectedTags.filter(t => t !== tag.label);
+                    } else {
+                        createFormState.selectedTags.push(tag.label);
+                        createFormState.selectedColor = tag.color;
+                    }
+                    renderCreateFormSelectors();
+                };
+                tagsBox.appendChild(btn);
+            });
+
+            // 風船の色設定
+            const colorsBox = document.getElementById('create-colors-container');
+            colorsBox.innerHTML = '';
+            Object.keys(BALLOON_PALETTE).forEach(colorKey => {
+                const pal = BALLOON_PALETTE[colorKey];
+                const isSelected = createFormState.selectedColor === colorKey;
+                const dot = document.createElement('button');
+                dot.type = 'button';
+                dot.title = pal.name;
+                dot.className = `w-6 h-6 rounded-full transition transform ${isSelected ? 'scale-125 ring-2 ring-offset-2 ring-slate-600' : 'opacity-80 hover:opacity-100'}`;
+                dot.style.background = pal.bg;
+                dot.onclick = () => {
+                    createFormState.selectedColor = colorKey;
+                    renderCreateFormSelectors();
+                };
+                colorsBox.appendChild(dot);
+            });
+        }
+
+        function submitNewTask() {
+            const titleVal = document.getElementById('input-task-title').value.trim();
+            const dueDateVal = document.getElementById('input-due-date').value.trim();
+
+            // バリデーション：件名または期限が未記入の場合
+            if (!titleVal || !dueDateVal) {
+                showToast('必要事項を記入してください', '⚠️');
+                return;
+            }
+
+            // サブタスク収集
+            const subtasks = [];
+            document.querySelectorAll('#subtask-inputs-container > div').forEach((row, idx) => {
+                const stTitle = row.querySelector('.subtask-title-input').value.trim();
+                const stDate = row.querySelector('.subtask-date-input').value;
+                if (stTitle) {
+                    subtasks.push({
+                        id: `sub-${Date.now()}-${idx}`,
+                        title: stTitle,
+                        dueDate: stDate || dueDateVal,
+                        checked: false
+                    });
+                }
+            });
+
+            const newTask = {
+                id: `task-${Date.now()}`,
+                summary: titleVal,
+                dueDate: dueDateVal,
+                tags: createFormState.selectedTags.length > 0 ? [...createFormState.selectedTags] : ['仕事'],
+                color: createFormState.selectedColor,
+                completed: false,
+                completedAt: null,
+                lastDailyResetDate: toDateStr(new Date()),
+                mainChecked: false,
+                subtasks: subtasks,
+                googleCalendarSync: { calendarId: 'primary', eventId: null, syncStatus: 'pending' }
+            };
+
+            state.tasks.push(newTask);
+            syncSpecialTagsAndDailyState();
+            updateCategoryBadges();
+            persistDataToDevice();
+
+            // メモが風船の中に入って膨らんで飛んでいくアニメーションを実行
+            playFlyAwayAnimation(newTask);
+        }
+
+        function playFlyAwayAnimation(task) {
+            const notepad = document.getElementById('notepad-card');
+            const stage = document.getElementById('fly-animation-stage');
+            const unit = document.getElementById('flying-balloon-unit');
+            const body = document.getElementById('flying-balloon-body');
+            const knot = document.getElementById('flying-balloon-knot');
+            const text = document.getElementById('flying-balloon-text');
+
+            const pal = BALLOON_PALETTE[task.color] || BALLOON_PALETTE.teal;
+            body.style.background = pal.bg;
+            knot.style.backgroundColor = pal.knot;
+            text.textContent = task.summary;
+
+            playTapInflateSound(2);
+            notepad.classList.add('animate-memo-shrink');
+
+            setTimeout(() => {
+                stage.classList.remove('hidden');
+                unit.classList.remove('animate-balloon-fly');
+                void unit.offsetWidth; // reflow
+                unit.classList.add('animate-balloon-fly');
+            }, 350);
+
+            setTimeout(() => {
+                stage.classList.add('hidden');
+                showToast('風船が空へ飛び立ちました！', '🎈');
+                navigateTo('view-categories', false);
+            }, 1650);
+        }
+
+        /**
+         * ============================================================================
+         * 11. セキュリティ・iCloud Driveバックアップ・復元・Googleカレンダー出力
+         * ============================================================================
+         */
+        function openSettingsModal() {
+            document.getElementById('modal-settings').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('modal-settings').classList.add('hidden');
+        }
+
+        // バックアップ用JSONデータ文字列を生成
+        function createBackupPayloadString() {
+            const backupObj = {
+                appName: 'Balloon Task',
+                exportedAt: new Date().toISOString(),
+                tasks: state.tasks,
+                customOrderToday: state.customOrderToday,
+                customTags: TAG_CONFIG.filter(t => !t.isSystem && !['urgent', 'important', 'reply', 'comm', 'work', 'private', 'idea'].includes(t.id))
+            };
+            return JSON.stringify(backupObj, null, 2);
+        }
+
+        // iCloud Driveへ保存（iOS/macOSの共有シートを呼び出し「"ファイル"に保存 → iCloud Drive」へ直結）
+        async function saveBackupToICloud() {
+            const jsonStr = createBackupPayloadString();
+            const fileName = `BalloonTask_Backup_${toDateStr(new Date())}.json`;
+            const file = new File([jsonStr], fileName, { type: 'application/json' });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Balloon Task バックアップ',
+                        text: '「"ファイル"に保存」から「iCloud Drive」を選択して保存してください'
+                    });
+                    showToast('iCloud Driveへの保存シートを開きました', '☁️');
+                    return;
+                } catch (err) {
+                    if (err.name === 'AbortError') return; // ユーザーがキャンセルした場合
+                }
+            }
+            // Web Share API非対応環境では通常ダウンロードにフォールバック
+            downloadBackupFile();
+            showToast('ダウンロード後、iCloud Driveへ移動できます', '☁️');
+        }
+
+        // 端末へバックアップファイル(.json)を直接書き出し
+        function downloadBackupFile() {
+            const jsonStr = createBackupPayloadString();
+            const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `BalloonTask_Backup_${toDateStr(new Date())}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('バックアップファイルを書き出しました', '📥');
+        }
+
+        // iCloud Driveまたは端末のファイルからバックアップを復元
+        function restoreBackupFromFile(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!data || !Array.isArray(data.tasks)) {
+                        showToast('無効なバックアップファイルです', '⚠️');
+                        return;
+                    }
+
+                    state.tasks = data.tasks;
+                    state.customOrderToday = Array.isArray(data.customOrderToday) ? data.customOrderToday : [];
+                    
+                    if (Array.isArray(data.customTags)) {
+                        data.customTags.forEach(ct => {
+                            if (!TAG_CONFIG.some(t => t.label === ct.label)) {
+                                TAG_CONFIG.push(ct);
+                            }
+                        });
+                    }
+
+                    syncSpecialTagsAndDailyState();
+                    persistDataToDevice();
+                    updateCategoryBadges();
+                    if (state.currentView === 'view-list') {
+                        renderTaskList();
+                    }
+                    closeSettingsModal();
+                    showToast(`${state.tasks.length}件のタスクを復元しました！`, '✨');
+                } catch (err) {
+                    showToast('ファイルの読み込みに失敗しました', '⚠️');
+                } finally {
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Googleカレンダーに取り込み可能な標準iCalendar (.ics) 形式で出力
+        function exportToICS() {
+            const activeTasks = state.tasks.filter(t => !t.completed);
+            if (activeTasks.length === 0) {
+                showToast('書き出す未完了タスクがありません', '📅');
+                return;
+            }
+
+            let icsLines = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'PRODID:-//Balloon Task//Relax & Focus ToDo//JP',
+                'CALSCALE:GREGORIAN'
+            ];
+
+            activeTasks.forEach(t => {
+                const dt = t.dueDate.replace(/-/g, '');
+                const escSummary = t.summary.replace(/[,;\\]/g, ' ');
+                const escDesc = `タグ: ${t.tags.join(', ')}`;
+                icsLines.push(
+                    'BEGIN:VEVENT',
+                    `UID:${t.id}@balloontask.local`,
+                    `DTSTAMP:${dt}T090000Z`,
+                    `DTSTART;VALUE=DATE:${dt}`,
+                    `SUMMARY:🎈 ${escSummary}`,
+                    `DESCRIPTION:${escDesc}`,
+                    'END:VEVENT'
+                );
+            });
+
+            icsLines.push('END:VCALENDAR');
+            const blob = new Blob([icsLines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `balloon-tasks-${toDateStr(new Date())}.ics`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Googleカレンダー用(.ics)ファイルを出力しました', '📅');
+        }
+
+        // 初期化実行
+        window.addEventListener('DOMContentLoaded', () => {
+            const hasSavedData = loadDataFromDevice();
+            if (!hasSavedData) {
+                initSampleTasks();
+            } else {
+                syncSpecialTagsAndDailyState();
+                updateCategoryBadges();
+            }
+            // 1分ごとに「期限3日以内」や「デイリー（7時・完了3時間後再出現）」を自動チェック
+            setInterval(() => {
+                syncSpecialTagsAndDailyState();
+                persistDataToDevice();
+                if (state.currentView === 'view-list') {
+                    renderTaskList();
+                } else if (state.currentView === 'view-categories') {
+                    updateCategoryBadges();
+                }
+            }, 60 * 1000);
+        });
+
+        /**
+         * ============================================================================
+         * 12. タブ（タグ）の追加・削除管理機能
+         * ============================================================================
+         */
+        let selectedNewTagColor = 'teal';
+
+        function openManageTagsModal() {
+            selectedNewTagColor = 'teal';
+            document.getElementById('new-tag-name').value = '';
+            document.getElementById('new-tag-priority').checked = false;
+            renderNewTagColorPicker();
+            renderManageTagsList();
+            document.getElementById('modal-manage-tags').classList.remove('hidden');
+        }
+
+        function closeManageTagsModal() {
+            document.getElementById('modal-manage-tags').classList.add('hidden');
+            // 開いている画面の表示を最新タグ一覧に同期
+            if (state.currentView === 'view-list' && state.listMode === 'tag') {
+                renderTagFilterBar();
+                renderTaskList();
+            } else if (state.currentView === 'view-create') {
+                renderCreateFormSelectors();
+            }
+        }
+
+        function renderNewTagColorPicker() {
+            const container = document.getElementById('new-tag-color-picker');
+            container.innerHTML = '';
+            Object.keys(BALLOON_PALETTE).forEach(colorKey => {
+                const pal = BALLOON_PALETTE[colorKey];
+                const isSelected = selectedNewTagColor === colorKey;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.title = pal.name;
+                btn.className = `w-5 h-5 rounded-full transition transform ${isSelected ? 'scale-125 ring-2 ring-offset-1 ring-slate-600' : 'opacity-75 hover:opacity-100'}`;
+                btn.style.background = pal.bg;
+                btn.onclick = () => {
+                    selectedNewTagColor = colorKey;
+                    renderNewTagColorPicker();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function addNewCustomTag() {
+            const input = document.getElementById('new-tag-name');
+            const label = input.value.trim();
+            const isPriority = document.getElementById('new-tag-priority').checked;
+
+            if (!label) {
+                showToast('タグ名を入力してください', '⚠️');
+                return;
+            }
+            if (TAG_CONFIG.some(t => t.label === label)) {
+                showToast('同じ名前のタグが既に存在します', '⚠️');
+                return;
+            }
+
+            TAG_CONFIG.push({
+                id: `custom-tag-${Date.now()}`,
+                label: label,
+                color: selectedNewTagColor,
+                priorityBoost: isPriority
+            });
+
+            input.value = '';
+            persistDataToDevice();
+            renderManageTagsList();
+            showToast(`タグ「${label}」を追加しました`, '🏷️');
+        }
+
+        function deleteCustomTag(tagId) {
+            const targetIdx = TAG_CONFIG.findIndex(t => t.id === tagId);
+            if (targetIdx === -1) return;
+
+            const removed = TAG_CONFIG[targetIdx];
+            if (removed.isSystem) {
+                showToast('システム特殊タグは削除できません', '🔒');
+                return;
+            }
+
+            if (TAG_CONFIG.length <= 1) {
+                showToast('最低1つのタグが必要です', '⚠️');
+                return;
+            }
+
+            TAG_CONFIG.splice(targetIdx, 1);
+
+            // 選択状態からもクリーンアップ
+            createFormState.selectedTags = createFormState.selectedTags.filter(lbl => lbl !== removed.label);
+            if (state.selectedFilterTag === removed.label) {
+                state.selectedFilterTag = 'all';
+            }
+
+            persistDataToDevice();
+            renderManageTagsList();
+            showToast(`タグ「${removed.label}」を削除しました`, '🗑️');
+        }
+
+        function renderManageTagsList() {
+            const list = document.getElementById('manage-tags-list');
+            list.innerHTML = '';
+
+            TAG_CONFIG.forEach(tag => {
+                const pal = BALLOON_PALETTE[tag.color] || BALLOON_PALETTE.teal;
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-100 shadow-2xs';
+
+                const left = document.createElement('div');
+                left.className = 'flex items-center gap-2';
+
+                const dot = document.createElement('span');
+                dot.className = 'w-3.5 h-3.5 rounded-full shrink-0';
+                dot.style.background = pal.bg;
+
+                const name = document.createElement('span');
+                name.className = 'text-xs font-bold text-slate-700';
+                name.textContent = tag.label;
+
+                left.appendChild(dot);
+                left.appendChild(name);
+
+                if (tag.isSystem) {
+                    const sysBadge = document.createElement('span');
+                    sysBadge.className = 'text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold';
+                    sysBadge.textContent = '特殊自動';
+                    left.appendChild(sysBadge);
+                } else if (tag.priorityBoost) {
+                    const prioBadge = document.createElement('span');
+                    prioBadge.className = 'text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold';
+                    prioBadge.textContent = '優先UP';
+                    left.appendChild(prioBadge);
+                }
+
+                row.appendChild(left);
+
+                if (!tag.isSystem) {
+                    const delBtn = document.createElement('button');
+                    delBtn.type = 'button';
+                    delBtn.title = '削除';
+                    delBtn.className = 'p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition';
+                    delBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>';
+                    delBtn.onclick = () => deleteCustomTag(tag.id);
+                    row.appendChild(delBtn);
+                } else {
+                    const lockSpan = document.createElement('span');
+                    lockSpan.className = 'text-[10px] text-slate-400 px-1.5';
+                    lockSpan.textContent = '固定';
+                    row.appendChild(lockSpan);
+                }
+
+                list.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>
