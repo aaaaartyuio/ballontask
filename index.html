@@ -236,7 +236,7 @@
                         <span class="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-sm">1か月</span>
                         <div class="text-left">
                             <div class="font-bold text-slate-700">１か月中のTo Do</div>
-                            <div class="text-[11px] text-slate-400">今月の優先度順風船リスト</div>
+                            <div class="text-[11px] text-slate-400">現在日から30日後までの優先度順風船</div>
                         </div>
                     </div>
                     <span id="badge-month" class="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 text-xs font-bold">0</span>
@@ -638,92 +638,9 @@
             return false;
         }
 
-        // 初期サンプルタスク生成（今日・今週・今月・今期にすぐ体験できるよう配置）
+        // 初期タスクリスト生成（デフォルト項目なし・空の状態からスタート）
         function initSampleTasks() {
-            const today = new Date();
-            const formatOffsetDate = (days) => {
-                const d = new Date(today);
-                d.setDate(d.getDate() + days);
-                return toDateStr(d);
-            };
-
-            state.tasks = [
-                {
-                    id: 'task-1',
-                    summary: 'クライアントへ企画書メール返信',
-                    dueDate: formatOffsetDate(0),
-                    tags: ['メール返信', '重要'],
-                    color: 'sky',
-                    completed: false,
-                    mainChecked: false,
-                    subtasks: [
-                        { id: 'sub-1', title: '見積もり金額の最終確認', dueDate: formatOffsetDate(0), checked: false },
-                        { id: 'sub-2', title: 'PDF添付して送信', dueDate: formatOffsetDate(0), checked: false }
-                    ],
-                    googleCalendarSync: { calendarId: 'primary', eventId: null, syncStatus: 'pending' }
-                },
-                {
-                    id: 'task-daily-1',
-                    summary: '朝のストレッチ＆白湯を飲む',
-                    dueDate: formatOffsetDate(0),
-                    tags: ['デイリー'],
-                    color: 'emerald',
-                    completed: false,
-                    completedAt: null,
-                    lastDailyResetDate: toDateStr(today),
-                    mainChecked: false,
-                    subtasks: [],
-                    googleCalendarSync: { calendarId: 'primary', eventId: null, syncStatus: 'pending' }
-                },
-                {
-                    id: 'task-2',
-                    summary: 'デザインチームの定例アジェンダ作成',
-                    dueDate: formatOffsetDate(0),
-                    tags: ['やり取りあり', '仕事'],
-                    color: 'indigo',
-                    completed: false,
-                    mainChecked: false,
-                    subtasks: [],
-                    googleCalendarSync: { calendarId: 'primary', eventId: null, syncStatus: 'pending' }
-                },
-                {
-                    id: 'task-3',
-                    summary: '今月の経費精算と領収書整理',
-                    dueDate: formatOffsetDate(2),
-                    tags: ['緊急', '仕事'],
-                    color: 'rose',
-                    completed: false,
-                    mainChecked: false,
-                    subtasks: [
-                        { id: 'sub-3', title: '交通費ICカード履歴出力', dueDate: formatOffsetDate(1), checked: false },
-                        { id: 'sub-4', title: '領収書スキャン', dueDate: formatOffsetDate(2), checked: false },
-                        { id: 'sub-5', title: '上長へ申請提出', dueDate: formatOffsetDate(2), checked: false }
-                    ],
-                    googleCalendarSync: { calendarId: 'primary', eventId: null, syncStatus: 'pending' }
-                },
-                {
-                    id: 'task-4',
-                    summary: '来週のプレゼン資料スライド構成',
-                    dueDate: formatOffsetDate(4),
-                    tags: ['重要', '仕事'],
-                    color: 'amber',
-                    completed: false,
-                    mainChecked: false,
-                    subtasks: [],
-                    googleCalendarSync: { calendarId: 'primary', eventId: null, syncStatus: 'pending' }
-                },
-                {
-                    id: 'task-5',
-                    summary: '読書：UXデザイン思考の本を完読する',
-                    dueDate: formatOffsetDate(18),
-                    tags: ['プライベート', 'アイデア'],
-                    color: 'emerald',
-                    completed: false,
-                    mainChecked: false,
-                    subtasks: [],
-                    googleCalendarSync: { calendarId: 'primary', eventId: null, syncStatus: 'pending' }
-                }
-            ];
+            state.tasks = [];
             syncSpecialTagsAndDailyState();
             updateCategoryBadges();
             persistDataToDevice();
@@ -985,11 +902,10 @@
                 });
             }
             if (mode === 'month') {
-                const y = refDate.getFullYear();
-                const m = refDate.getMonth();
+                // 基準日（現在日）から数えて30日後までに期限が設定されている項目を表示
                 return nonDailyActive.filter(t => {
-                    const d = parseDateStr(t.dueDate);
-                    return d.getFullYear() === y && d.getMonth() === m;
+                    const diffDays = getDaysDiffFromRef(t.dueDate, refDate);
+                    return diffDays >= 0 && diffDays <= 30;
                 });
             }
             if (mode === 'quarter') {
@@ -1071,8 +987,10 @@
                 titleEl.textContent = `${m}月${d}日(${w}) 今週中のTo Do`;
                 hintEl.textContent = '風船を長押しで「来週に回す」「2週間後に回す」「削除」';
             } else if (state.listMode === 'month') {
-                titleEl.textContent = `${m}月のTo do一覧`;
-                hintEl.textContent = '優先順位が高い順に並んでいます・期限が近いほどパンパン！';
+                const end30 = new Date(ref);
+                end30.setDate(end30.getDate() + 30);
+                titleEl.textContent = `1か月中のTo do一覧（〜${end30.getMonth() + 1}/${end30.getDate()}）`;
+                hintEl.textContent = '基準日から30日後までのタスク・優先順位順';
             } else if (state.listMode === 'quarter') {
                 const q = getFiscalQuarter(ref);
                 titleEl.textContent = `第${q}期のTo do`;
