@@ -214,7 +214,6 @@
                         <span class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-sm">今日</span>
                         <div class="text-left">
                             <div class="font-bold text-slate-700">今日中のTo Do</div>
-                            <div class="text-[11px] text-slate-400">ドラッグ＆ドロップで自由に並び替え可能</div>
                         </div>
                     </div>
                     <span id="badge-today" class="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-600 text-xs font-bold">0</span>
@@ -225,7 +224,6 @@
                         <span class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">1週間</span>
                         <div class="text-left">
                             <div class="font-bold text-slate-700">１週間中のTo Do</div>
-                            <div class="text-[11px] text-slate-400">曜日別表示・長押しで来週へ先送り</div>
                         </div>
                     </div>
                     <span id="badge-week" class="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs font-bold">0</span>
@@ -236,7 +234,6 @@
                         <span class="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-sm">1か月</span>
                         <div class="text-left">
                             <div class="font-bold text-slate-700">１か月中のTo Do</div>
-                            <div class="text-[11px] text-slate-400">現在日から30日後までの優先度順風船</div>
                         </div>
                     </div>
                     <span id="badge-month" class="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 text-xs font-bold">0</span>
@@ -247,7 +244,6 @@
                         <span class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">3か月</span>
                         <div class="text-left">
                             <div class="font-bold text-slate-700">３か月中のTo Do</div>
-                            <div class="text-[11px] text-slate-400">四半期（1期〜4期）ごとの目標・予定</div>
                         </div>
                     </div>
                     <span id="badge-quarter" class="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold">0</span>
@@ -258,7 +254,6 @@
                         <span class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg">🏷️</span>
                         <div class="text-left">
                             <div class="font-bold text-slate-700">タグ別To do</div>
-                            <div class="text-[11px] text-slate-400">タグごとに分類・タグの追加削除</div>
                         </div>
                     </div>
                     <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
@@ -275,18 +270,15 @@
                 <h2 id="list-title" class="text-base sm:text-lg font-bold text-slate-700 text-center">
                     〇月〇日のTo do一覧
                 </h2>
-                <!-- カレンダーマーク（別日選択ピッカーを起動） -->
-                <button onclick="openDatePicker()" title="別の日を選択" class="p-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 transition active:scale-90 relative">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                </button>
-                <input type="date" id="hidden-date-picker" class="sr-only" onchange="onDatePicked(this.value)">
-            </div>
-
-            <!-- 操作ヒントバー -->
-            <div id="list-hint-bar" class="text-[11px] text-center text-slate-500 mb-3 bg-white/50 py-1 px-3 rounded-full">
-                風船をタップして詳細確認・チェック後に3回タップで割れます
+                <!-- カレンダーマーク（別日選択ピッカーを起動 / 週間モードは2週間切替） -->
+                <div class="relative inline-flex items-center justify-center">
+                    <button id="btn-calendar-picker" type="button" onclick="openDatePicker()" title="別の日を選択" class="p-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 transition active:scale-90 relative">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </button>
+                    <input type="date" id="hidden-date-picker" aria-label="別の日を選択" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="onDatePicked(this.value)">
+                </div>
             </div>
 
             <!-- タグ別モード時のタグフィルターバー（＋タグ追加・削除ボタン付き） -->
@@ -463,15 +455,12 @@
                     </button>
                 </div>
 
-                <!-- カラー選択＆優先度設定 -->
+                <!-- カラー選択 -->
                 <div class="flex items-center justify-between pt-1">
+                    <span class="text-[11px] font-bold text-slate-500">カラー</span>
                     <div class="flex items-center gap-1.5" id="new-tag-color-picker">
                         <!-- JSで色丸ボタン生成 -->
                     </div>
-                    <label class="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer select-none">
-                        <input type="checkbox" id="new-tag-priority" class="accent-teal-600 rounded">
-                        <span>優先順位UP対象</span>
-                    </label>
                 </div>
             </div>
 
@@ -507,22 +496,33 @@
             <!-- iCloud Drive & バックアップ書き出し・復元 -->
             <div class="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-100 text-xs text-indigo-950 space-y-2.5">
                 <div class="font-bold flex items-center justify-between">
-                    <span>☁️ iCloud保存 & バックアップ復元</span>
-                    <span class="px-2 py-0.5 rounded-full bg-indigo-200/70 text-indigo-800 text-[10px]">iOS / Mac対応</span>
+                    <span>☁️ バックアップ & 別ブラウザ引継ぎ</span>
+                    <span class="px-2 py-0.5 rounded-full bg-indigo-200/70 text-indigo-800 text-[10px]">iOS完全対応</span>
                 </div>
                 <p class="leading-relaxed opacity-90">
-                    「iCloudに保存」を押すと共有メニューが開きます。<b>「"ファイル"に保存」→「iCloud Drive」</b>を選ぶとクラウドに安全に保管できます。
+                    ホーム画面アプリからSafari等へ引き継ぐ場合は、下の<b>「引継ぎコードをコピー」</b>が一番確実で安全です。
                 </p>
                 <div class="grid grid-cols-1 gap-2 pt-1">
-                    <button onclick="saveBackupToICloud()" class="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition shadow-xs flex items-center justify-center gap-1.5">
-                        <span>☁️ iCloud Driveにバックアップ保存</span>
+                    <button onclick="copyBackupCodeToClipboard()" class="w-full py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs transition shadow-xs flex items-center justify-center gap-1.5">
+                        <span>📋 引継ぎバックアップコードをコピー</span>
                     </button>
-                    <button onclick="downloadBackupFile()" class="w-full py-2 px-3 rounded-xl bg-white hover:bg-indigo-100/60 text-indigo-700 border border-indigo-200 font-bold text-xs transition flex items-center justify-center gap-1.5">
-                        <span>📥 端末にバックアップファイルを書き出す</span>
+                    <div class="bg-white p-2 rounded-xl border border-indigo-200 space-y-1.5">
+                        <textarea id="paste-backup-code" rows="2" placeholder="ここにコピーした引継ぎコードを貼り付け..." class="w-full text-[11px] bg-slate-50 rounded-lg p-1.5 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-teal-500"></textarea>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button onclick="importBackupFromText(true)" class="py-1.5 px-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] transition">
+                                データを統合(追加)
+                            </button>
+                            <button onclick="importBackupFromText(false)" class="py-1.5 px-2 rounded-lg bg-slate-600 hover:bg-slate-700 text-white font-bold text-[11px] transition">
+                                すべて上書き復元
+                            </button>
+                        </div>
+                    </div>
+                    <button onclick="saveBackupToICloud()" class="w-full py-2 px-3 rounded-xl bg-white hover:bg-indigo-100/60 text-indigo-700 border border-indigo-200 font-bold text-xs transition flex items-center justify-center gap-1.5">
+                        <span>☁️ iCloud Driveにファイル保存</span>
                     </button>
                     <label class="w-full py-2 px-3 rounded-xl bg-white hover:bg-indigo-100/60 text-slate-700 border border-slate-200 font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
-                        <span>📂 iCloud / ファイルから復元する</span>
-                        <input type="file" id="backup-file-input" accept=".json,application/json" class="hidden" onchange="restoreBackupFromFile(event)">
+                        <span>📂 ファイルから復元（統合）する</span>
+                        <input type="file" id="backup-file-input" accept=".json,application/json,text/plain" class="hidden" onchange="restoreBackupFromFile(event)">
                     </label>
                 </div>
             </div>
@@ -560,22 +560,26 @@
             amber:   { name: 'サンシャイン',   bg: 'linear-gradient(135deg, #fcd34d 0%, #d97706 100%)', knot: '#b45309', badge: 'bg-amber-100 text-amber-800' },
             teal:    { name: 'セージグリーン', bg: 'linear-gradient(135deg, #5eead4 0%, #0d9488 100%)', knot: '#0f766e', badge: 'bg-teal-100 text-teal-800' },
             sky:     { name: 'スカイブルー',   bg: 'linear-gradient(135deg, #7dd3fc 0%, #0284c7 100%)', knot: '#0369a1', badge: 'bg-sky-100 text-sky-800' },
-            indigo:  { name: 'ラベンダー',     bg: 'linear-gradient(135deg, #a5b4fc 0%, #4f46e5 100%)', knot: '#4338ca', badge: 'bg-indigo-100 text-indigo-800' },
+            indigo:  { name: 'ラベンダー',     bg: 'linear-gradient(135deg, #a5b4fc 0%, #4f46e5 100%)', knot: '#3730a3', badge: 'bg-indigo-100 text-indigo-800' },
             emerald: { name: 'ミントリーフ',   bg: 'linear-gradient(135deg, #6ee7b7 0%, #059669 100%)', knot: '#047857', badge: 'bg-emerald-100 text-emerald-800' }
         };
 
-        // タグ定義（特殊タグ「期限3日以内」「デイリー」＋優先順位UPタグ＋一般タグ）
+        // タグ定義（⑨ 初期状態のタグ12種類を定義）
         const TAG_CONFIG = [
-            { id: 'due3days',  label: '期限3日以内', color: 'rose',    priorityBoost: true,  isSystem: true, autoOnly: true, desc: '期限3日以内で自動付与' },
-            { id: 'daily',     label: 'デイリー',     color: 'emerald', priorityBoost: false, isSystem: true, autoOnly: false, desc: '毎日7時＆完了3時間後に再表示（今日中専用）' },
+            { id: 'longterm',  label: '長期目標',     color: 'indigo',  priorityBoost: false, isSystem: true, autoOnly: false },
+            { id: 'daily',     label: 'デイリー',     color: 'emerald', priorityBoost: false, isSystem: true, autoOnly: false },
+            { id: 'due3days',  label: '3日以内',     color: 'rose',    priorityBoost: true,  isSystem: true, autoOnly: true },
+            { id: 'weekly',    label: '1週間おき',   color: 'sky',     priorityBoost: false, isSystem: true, autoOnly: false },
             { id: 'urgent',    label: '緊急',         color: 'rose',    priorityBoost: true },
             { id: 'important', label: '重要',         color: 'amber',   priorityBoost: true },
             { id: 'reply',     label: 'メール返信',   color: 'sky',     priorityBoost: true },
-            { id: 'comm',      label: 'やり取りあり', color: 'indigo',  priorityBoost: true },
+            { id: 'task_hw',   label: '課題',         color: 'amber',   priorityBoost: false },
             { id: 'work',      label: '仕事',         color: 'teal',    priorityBoost: false },
             { id: 'private',   label: 'プライベート', color: 'emerald', priorityBoost: false },
-            { id: 'idea',      label: 'アイデア',     color: 'amber',   priorityBoost: false }
+            { id: 'idea',      label: 'アイデア',     color: 'amber',   priorityBoost: false },
+            { id: 'money',     label: 'お金関係',     color: 'teal',    priorityBoost: false }
         ];
+        const DEFAULT_TAG_IDS = TAG_CONFIG.map(t => t.id);
 
         // アプリケーション状態（ローカルストレージ自動保存 + インメモリ高速動作）
         const STORAGE_KEY = 'balloon_task_secure_data_v1';
@@ -585,6 +589,7 @@
             history: [],
             listMode: 'today', // 'today' | 'week' | 'month' | 'quarter' | 'tag'
             referenceDate: new Date(), // カレンダーマークで変更可能な基準日
+            weekSpanDays: 6, // 0日後から6日後まで（カレンダー押下で13日後＝2週間後に切替可）
             selectedFilterTag: 'all',
             tasks: [], // Google Calendar API互換スキーマで保持
             customOrderToday: [], // 今日中のTo Doの手動ドラッグ＆ドロップ順IDリスト
@@ -597,11 +602,11 @@
         function persistDataToDevice() {
             try {
                 const payload = {
-                    version: 1,
+                    version: 2,
                     savedAt: new Date().toISOString(),
                     tasks: state.tasks,
                     customOrderToday: state.customOrderToday,
-                    customTags: TAG_CONFIG.filter(t => !t.isSystem && !['urgent', 'important', 'reply', 'comm', 'work', 'private', 'idea'].includes(t.id))
+                    customTags: TAG_CONFIG.filter(t => !DEFAULT_TAG_IDS.includes(t.id))
                 };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
                 const timeBadge = document.getElementById('last-saved-time');
@@ -683,17 +688,19 @@
                     }
                 }
 
-                // 2. 「期限3日以内」の自動付与・解除判定（未完了タスク対象）
+                // 2. 「3日以内」の自動付与・解除判定（未完了タスク対象）
                 if (!task.completed && task.dueDate) {
                     const daysLeft = getDaysDiffFromRef(task.dueDate, now);
-                    const has3DaysTag = task.tags.includes('期限3日以内');
+                    // 旧名称「期限3日以内」があれば「3日以内」へ正規化
+                    task.tags = task.tags.map(t => t === '期限3日以内' ? '3日以内' : t);
+                    const has3DaysTag = task.tags.includes('3日以内');
                     if (daysLeft <= 3) {
                         if (!has3DaysTag) {
-                            task.tags.unshift('期限3日以内');
+                            task.tags.unshift('3日以内');
                         }
                     } else {
                         if (has3DaysTag) {
-                            task.tags = task.tags.filter(t => t !== '期限3日以内');
+                            task.tags = task.tags.filter(t => t !== '3日以内');
                         }
                     }
                 }
@@ -895,29 +902,28 @@
             const nonDailyActive = active.filter(t => !t.tags.includes('デイリー'));
 
             if (mode === 'week') {
-                const { start, end } = getWeekRange(refDate);
+                // ④ 0日後から6日後まで（カレンダーマークで2週間後＝13日後まで切替可能）を表示
+                const maxDays = state.weekSpanDays || 6;
                 return nonDailyActive.filter(t => {
-                    const d = parseDateStr(t.dueDate);
-                    return d >= start && d <= end;
+                    const diffDays = getDaysDiffFromRef(t.dueDate, refDate);
+                    return diffDays >= 0 && diffDays <= maxDays;
                 });
             }
+
             if (mode === 'month') {
-                // 基準日（現在日）から数えて30日後までに期限が設定されている項目を表示
+                // ⑧ 1ヶ月間のto do には『デイリー』『1週間おき』のタグが含まれた項目は載せない（基準日から0〜30日後）
                 return nonDailyActive.filter(t => {
+                    if (t.tags.includes('1週間おき')) return false;
                     const diffDays = getDaysDiffFromRef(t.dueDate, refDate);
                     return diffDays >= 0 && diffDays <= 30;
                 });
             }
+
             if (mode === 'quarter') {
-                const targetQ = getFiscalQuarter(refDate);
-                const y = refDate.getFullYear();
-                const fiscalYear = (refDate.getMonth() + 1) >= 4 ? y : y - 1;
-                return nonDailyActive.filter(t => {
-                    const d = parseDateStr(t.dueDate);
-                    const dFY = (d.getMonth() + 1) >= 4 ? d.getFullYear() : d.getFullYear() - 1;
-                    return dFY === fiscalYear && getFiscalQuarter(d) === targetQ;
-                });
+                // ⑤ 特殊タグ『長期目標』が含まれた項目のみ、『3ヶ月のto do』に表示（それ以外は表示しない）
+                return nonDailyActive.filter(t => t.tags.includes('長期目標'));
             }
+
             if (mode === 'tag') {
                 if (tagFilter === 'all') return nonDailyActive;
                 return nonDailyActive.filter(t => t.tags.includes(tagFilter));
@@ -927,27 +933,49 @@
 
         function updateCategoryBadges() {
             const now = new Date();
+            const prevSpan = state.weekSpanDays;
+            state.weekSpanDays = 6;
             document.getElementById('badge-today').textContent = filterTasksForMode('today', now).length;
             document.getElementById('badge-week').textContent = filterTasksForMode('week', now).length;
             document.getElementById('badge-month').textContent = filterTasksForMode('month', now).length;
             document.getElementById('badge-quarter').textContent = filterTasksForMode('quarter', now).length;
+            state.weekSpanDays = prevSpan;
         }
 
         function openTaskList(mode) {
             state.listMode = mode;
             state.referenceDate = new Date();
+            state.weekSpanDays = 6;
             state.selectedFilterTag = 'all';
             navigateTo('view-list');
             renderTaskList();
         }
 
-        // カレンダーマーク押下時
+        // カレンダーマーク押下時（⑦ 1週間モードでは「0〜6日後」と「2週間後（0〜13日後）」を切り替え可能に）
         function openDatePicker() {
+            if (state.listMode === 'week') {
+                state.weekSpanDays = state.weekSpanDays === 6 ? 13 : 6;
+                renderTaskList();
+                showToast(
+                    state.weekSpanDays === 13
+                        ? '2週間後（13日後まで）のTo Doリストに切り替えました'
+                        : '1週間後（6日後まで）のTo Doリストに戻しました',
+                    '📅'
+                );
+                return;
+            }
             const picker = document.getElementById('hidden-date-picker');
             picker.value = toDateStr(state.referenceDate);
-            if (picker.showPicker) {
-                picker.showPicker();
-            } else {
+            try {
+                if (typeof picker.showPicker === 'function') {
+                    picker.showPicker();
+                } else {
+                    picker.focus();
+                    picker.click();
+                }
+            } catch (e) {
+                // クロスオリジンiframe等でshowPickerがブロックされた場合のフォールバック
+                picker.focus();
                 picker.click();
             }
         }
@@ -972,32 +1000,39 @@
             const w = weekdays[ref.getDay()];
 
             const titleEl = document.getElementById('list-title');
-            const hintEl = document.getElementById('list-hint-bar');
             const tagBar = document.getElementById('tag-filter-bar');
             const container = document.getElementById('balloon-container');
 
             tagBar.classList.add('hidden');
             container.innerHTML = '';
 
-            // タイトルとヒントの切り替え
+            // タイトルの切り替え
+            const pickerEl = document.getElementById('hidden-date-picker');
+            if (pickerEl) {
+                pickerEl.value = toDateStr(ref);
+                // 週間モード時はボタンの2週間切替クリックを優先するため透明inputを無効化
+                if (state.listMode === 'week') {
+                    pickerEl.classList.add('pointer-events-none');
+                } else {
+                    pickerEl.classList.remove('pointer-events-none');
+                }
+            }
+
             if (state.listMode === 'today') {
                 titleEl.textContent = `${m}月${d}日のTo do一覧`;
-                hintEl.textContent = 'ドラッグ＆ドロップで風船を自由に動かせます・タップで詳細';
             } else if (state.listMode === 'week') {
-                titleEl.textContent = `${m}月${d}日(${w}) 今週中のTo Do`;
-                hintEl.textContent = '風船を長押しで「来週に回す」「2週間後に回す」「削除」';
+                titleEl.textContent = state.weekSpanDays === 13
+                    ? `${m}月${d}日(${w}) 2週間後までのTo Do`
+                    : `${m}月${d}日(${w}) 今週中のTo Do`;
             } else if (state.listMode === 'month') {
                 const end30 = new Date(ref);
                 end30.setDate(end30.getDate() + 30);
                 titleEl.textContent = `1か月中のTo do一覧（〜${end30.getMonth() + 1}/${end30.getDate()}）`;
-                hintEl.textContent = '基準日から30日後までのタスク・優先順位順';
             } else if (state.listMode === 'quarter') {
                 const q = getFiscalQuarter(ref);
-                titleEl.textContent = `第${q}期のTo do`;
-                hintEl.textContent = '4月始まり四半期ごとのTo Do・優先順位順';
+                titleEl.textContent = `第${q}期のTo do（長期目標）`;
             } else if (state.listMode === 'tag') {
                 titleEl.textContent = `タグ別To do一覧`;
-                hintEl.textContent = 'タグをタップして絞り込み・風船タップで詳細';
                 renderTagFilterBar();
                 tagBar.classList.remove('hidden');
             }
@@ -1130,14 +1165,14 @@
                 const wrapper = document.createElement('div');
                 wrapper.className = `flex flex-col items-center balloon-float ${delayClass} ${scaleClass} transition-transform`;
                 wrapper.dataset.taskId = task.id;
-
-                // 「今日中のTo Do」モード：ドラッグ＆ドロップ（PC & スマホタッチ両対応）
+                // 「今日中のTo Do」モード：ドラッグ＆ドロップ（PC & スマホタッチ両対応）＆長押し削除
                 if (state.listMode === 'today') {
                     setupDragAndDrop(wrapper, task.id, taskList);
+                    setupLongPress(wrapper, task);
                 }
 
-                // 「1週間中のTo Do」モード：長押しメニュー（来週・2週間後・削除）
-                if (state.listMode === 'week') {
+                // 「1週間中のTo Do」「3か月中のTo Do」モード：長押しメニュー
+                if (state.listMode === 'week' || state.listMode === 'quarter') {
                     setupLongPress(wrapper, task);
                 }
 
@@ -1478,17 +1513,43 @@
                 playPopSound();
                 visual.classList.remove('balloon-tap-2');
                 visual.classList.add('balloon-popping');
-                task.completed = true;
-                task.completedAt = new Date().toISOString();
-                persistDataToDevice();
                 
                 const isDaily = task.tags.includes('デイリー');
+                const isWeeklyCycle = task.tags.includes('1週間おき');
+
+                if (isWeeklyCycle) {
+                    // 「1週間おき」は完了すると7日後の期限に自動更新して来週用に再セット
+                    const nextWeekDate = parseDateStr(task.dueDate);
+                    nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+                    task.dueDate = toDateStr(nextWeekDate);
+                    task.completed = false;
+                    task.mainChecked = false;
+                    if (task.subtasks) {
+                        task.subtasks.forEach(s => {
+                            s.checked = false;
+                            if (s.dueDate) {
+                                const sd = parseDateStr(s.dueDate);
+                                sd.setDate(sd.getDate() + 7);
+                                s.dueDate = toDateStr(sd);
+                            }
+                        });
+                    }
+                    syncSpecialTagsAndDailyState();
+                } else {
+                    task.completed = true;
+                    task.completedAt = new Date().toISOString();
+                }
+
+                persistDataToDevice();
+                
                 setTimeout(() => {
                     closeDetailModal();
                     renderTaskList();
                     updateCategoryBadges();
                     if (isDaily) {
                         showToast('デイリー完了！3時間後にまた出現します', '🔄');
+                    } else if (isWeeklyCycle) {
+                        showToast('完了！1週間後のリストに自動セットしました', '🗓️');
                     } else {
                         showToast('パチン！タスクを完了しました！', '🎉');
                     }
@@ -1523,6 +1584,15 @@
         function openLongPressModal(task) {
             state.longPressTargetTaskId = task.id;
             document.getElementById('longpress-task-title').textContent = task.summary;
+            // 「来週に回す」「2週間後に回す」は1週間モードのみ表示し、今日中・3か月モードは削除ボタンのみ表示
+            const deferBtns = document.querySelectorAll('#modal-longpress button[onclick^="deferTaskWeeks"]');
+            deferBtns.forEach(btn => {
+                if (state.listMode === 'week') {
+                    btn.classList.remove('hidden');
+                } else {
+                    btn.classList.add('hidden');
+                }
+            });
             document.getElementById('modal-longpress').classList.remove('hidden');
         }
 
@@ -1624,7 +1694,7 @@
                         ? 'bg-teal-600 text-white border-teal-600 shadow-2xs'
                         : 'bg-white/80 text-slate-600 border-slate-200 hover:bg-white'
                 }`;
-                btn.textContent = tag.label === 'デイリー' ? '🔄 デイリー' : tag.label;
+                btn.textContent = tag.label;
                 btn.onclick = () => {
                     if (isSelected) {
                         createFormState.selectedTags = createFormState.selectedTags.filter(t => t !== tag.label);
@@ -1754,9 +1824,98 @@
                 exportedAt: new Date().toISOString(),
                 tasks: state.tasks,
                 customOrderToday: state.customOrderToday,
-                customTags: TAG_CONFIG.filter(t => !t.isSystem && !['urgent', 'important', 'reply', 'comm', 'work', 'private', 'idea'].includes(t.id))
+                customTags: TAG_CONFIG.filter(t => !DEFAULT_TAG_IDS.includes(t.id))
             };
             return JSON.stringify(backupObj, null, 2);
+        }
+
+        // ③ 最も安全な引継ぎ方法：暗号化風Base64文字列をクリップボードへコピー（iOSホーム画面アプリ完全対応）
+        function copyBackupCodeToClipboard() {
+            try {
+                const jsonStr = createBackupPayloadString();
+                // UTF-8日本語を安全にBase64化
+                const encoded = btoa(unescape(encodeURIComponent(jsonStr)));
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(encoded).then(() => {
+                        showToast('引継ぎコードをコピーしました！移行先で貼り付けてください', '📋');
+                    }).catch(() => fallbackCopyText(encoded));
+                } else {
+                    fallbackCopyText(encoded);
+                }
+            } catch (e) {
+                showToast('コードの生成に失敗しました', '⚠️');
+            }
+        }
+
+        function fallbackCopyText(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast('引継ぎコードをコピーしました！', '📋');
+        }
+
+        // 貼り付けた引継ぎコードまたはJSON文字列から安全に復元・統合する
+        function importBackupFromText(isMerge = true) {
+            const rawInput = document.getElementById('paste-backup-code')?.value.trim();
+            if (!rawInput) {
+                showToast('引継ぎコードを貼り付けてください', '⚠️');
+                return;
+            }
+            try {
+                let jsonStr = rawInput;
+                if (!rawInput.startsWith('{')) {
+                    jsonStr = decodeURIComponent(escape(atob(rawInput)));
+                }
+                const data = JSON.parse(jsonStr);
+                applyImportedBackupData(data, isMerge);
+                document.getElementById('paste-backup-code').value = '';
+            } catch (e) {
+                showToast('コードの形式が正しくありません', '⚠️');
+            }
+        }
+
+        function applyImportedBackupData(data, isMerge) {
+            if (!data || !Array.isArray(data.tasks)) {
+                showToast('有効なバックアップデータではありません', '⚠️');
+                return;
+            }
+            if (isMerge) {
+                // 重複IDを除外して既存データと安全に統合
+                const existingIds = new Set(state.tasks.map(t => t.id));
+                let addedCount = 0;
+                data.tasks.forEach(t => {
+                    if (!existingIds.has(t.id)) {
+                        state.tasks.push(t);
+                        addedCount++;
+                    }
+                });
+                showToast(`${addedCount}件の新しいタスクを統合しました！`, '✨');
+            } else {
+                state.tasks = data.tasks;
+                state.customOrderToday = Array.isArray(data.customOrderToday) ? data.customOrderToday : [];
+                showToast(`${state.tasks.length}件のタスクを上書き復元しました！`, '✨');
+            }
+
+            if (Array.isArray(data.customTags)) {
+                data.customTags.forEach(ct => {
+                    if (!TAG_CONFIG.some(t => t.label === ct.label)) {
+                        TAG_CONFIG.push(ct);
+                    }
+                });
+            }
+
+            syncSpecialTagsAndDailyState();
+            persistDataToDevice();
+            updateCategoryBadges();
+            if (state.currentView === 'view-list') {
+                renderTaskList();
+            }
+            closeSettingsModal();
         }
 
         // iCloud Driveへ保存（iOS/macOSの共有シートを呼び出し「"ファイル"に保存 → iCloud Drive」へ直結）
@@ -1806,31 +1965,10 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    const data = JSON.parse(e.target.result);
-                    if (!data || !Array.isArray(data.tasks)) {
-                        showToast('無効なバックアップファイルです', '⚠️');
-                        return;
-                    }
-
-                    state.tasks = data.tasks;
-                    state.customOrderToday = Array.isArray(data.customOrderToday) ? data.customOrderToday : [];
-                    
-                    if (Array.isArray(data.customTags)) {
-                        data.customTags.forEach(ct => {
-                            if (!TAG_CONFIG.some(t => t.label === ct.label)) {
-                                TAG_CONFIG.push(ct);
-                            }
-                        });
-                    }
-
-                    syncSpecialTagsAndDailyState();
-                    persistDataToDevice();
-                    updateCategoryBadges();
-                    if (state.currentView === 'view-list') {
-                        renderTaskList();
-                    }
-                    closeSettingsModal();
-                    showToast(`${state.tasks.length}件のタスクを復元しました！`, '✨');
+                    const raw = String(e.target.result || '').trim();
+                    const jsonStr = raw.startsWith('{') ? raw : decodeURIComponent(escape(atob(raw)));
+                    const data = JSON.parse(jsonStr);
+                    applyImportedBackupData(data, true);
                 } catch (err) {
                     showToast('ファイルの読み込みに失敗しました', '⚠️');
                 } finally {
@@ -1914,7 +2052,6 @@
         function openManageTagsModal() {
             selectedNewTagColor = 'teal';
             document.getElementById('new-tag-name').value = '';
-            document.getElementById('new-tag-priority').checked = false;
             renderNewTagColorPicker();
             renderManageTagsList();
             document.getElementById('modal-manage-tags').classList.remove('hidden');
@@ -1953,7 +2090,6 @@
         function addNewCustomTag() {
             const input = document.getElementById('new-tag-name');
             const label = input.value.trim();
-            const isPriority = document.getElementById('new-tag-priority').checked;
 
             if (!label) {
                 showToast('タグ名を入力してください', '⚠️');
@@ -1968,7 +2104,7 @@
                 id: `custom-tag-${Date.now()}`,
                 label: label,
                 color: selectedNewTagColor,
-                priorityBoost: isPriority
+                priorityBoost: false
             });
 
             input.value = '';
@@ -2027,18 +2163,6 @@
 
                 left.appendChild(dot);
                 left.appendChild(name);
-
-                if (tag.isSystem) {
-                    const sysBadge = document.createElement('span');
-                    sysBadge.className = 'text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold';
-                    sysBadge.textContent = '特殊自動';
-                    left.appendChild(sysBadge);
-                } else if (tag.priorityBoost) {
-                    const prioBadge = document.createElement('span');
-                    prioBadge.className = 'text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold';
-                    prioBadge.textContent = '優先UP';
-                    left.appendChild(prioBadge);
-                }
 
                 row.appendChild(left);
 
